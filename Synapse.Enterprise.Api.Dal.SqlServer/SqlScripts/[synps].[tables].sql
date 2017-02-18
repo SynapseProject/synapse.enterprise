@@ -1,7 +1,7 @@
 CREATE SCHEMA [synps]
 GO
 
-/****** Object:  Table [synps].[Plan]    Script Date: 2/18/2017 6:45:35 PM ******/
+/****** Object:  Table [synps].[Plan]    Script Date: 2/18/2017 10:36:00 PM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -16,6 +16,10 @@ CREATE TABLE [synps].[Plan](
 	[PlanFile] [varchar](max) NOT NULL,
 	[PlanFileIsUri] [bit] NOT NULL,
 	[PlanContainerUId] [uniqueidentifier] NOT NULL,
+	[AuditCreatedBy] [varchar](50) NOT NULL,
+	[AuditCreatedTime] [datetime] NOT NULL,
+	[AuditModifiedBy] [varchar](50) NOT NULL,
+	[AuditModifiedTime] [datetime] NOT NULL,
  CONSTRAINT [PK_Plan] PRIMARY KEY CLUSTERED 
 (
 	[PlanUId] ASC
@@ -24,7 +28,7 @@ CREATE TABLE [synps].[Plan](
 
 GO
 
-/****** Object:  Table [synps].[PlanContainer]    Script Date: 2/18/2017 6:45:35 PM ******/
+/****** Object:  Table [synps].[PlanContainer]    Script Date: 2/18/2017 10:36:00 PM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -39,6 +43,10 @@ CREATE TABLE [synps].[PlanContainer](
 	[RlsMask] [varbinary](max) NULL,
 	[RlsOwner] [uniqueidentifier] NULL,
 	[ParentUId] [uniqueidentifier] NULL,
+	[AuditCreatedBy] [varchar](50) NOT NULL,
+	[AuditCreatedTime] [datetime] NOT NULL,
+	[AuditModifiedBy] [varchar](50) NOT NULL,
+	[AuditModifiedTime] [datetime] NOT NULL,
  CONSTRAINT [PK_PlanContainer] PRIMARY KEY CLUSTERED 
 (
 	[PlanContainerUId] ASC
@@ -47,7 +55,7 @@ CREATE TABLE [synps].[PlanContainer](
 
 GO
 
-/****** Object:  Table [synps].[PlanInstance]    Script Date: 2/18/2017 6:45:35 PM ******/
+/****** Object:  Table [synps].[PlanInstance]    Script Date: 2/18/2017 10:36:00 PM ******/
 SET ANSI_NULLS ON
 GO
 
@@ -87,5 +95,4 @@ GO
 
 ALTER TABLE [synps].[PlanInstance] CHECK CONSTRAINT [FK_PlanInstance_Plan]
 GO
-
 
