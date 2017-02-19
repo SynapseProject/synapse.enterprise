@@ -139,6 +139,9 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 ParentId = planContainer.ParentUId
             };
 
+            if( !planContainer.IsNew )
+                uie.Id = planContainer.UId;
+
             uie.SecurityDescriptor.DaclInherit =
                 uie.SecurityDescriptor.SaclInherit = true;
             uie.SecurityDescriptor.SaclAuditTypeFilter = (Suplex.Security.AuditType)31;

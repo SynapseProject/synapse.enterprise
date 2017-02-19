@@ -18,7 +18,7 @@ namespace Synapse.Services.Enterprise.Api
         {
             get
             {
-                return -1;
+                throw new Exception( "need to do this next" );
             }
         }
     }
