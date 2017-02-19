@@ -1,25 +1,38 @@
-﻿using Suplex.Forms.ObjectModel.Api;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
     public partial class SqlServerDal : IEnterpriseDal
     {
-        public PlanItem GetPlanByUId(Guid planUId)
+        public PlanItem GetPlanByUId(Guid planUId, bool autoManageSqlConnection = true, bool validateRls = false)
         {
-            throw new NotImplementedException();
+            PlanItem planItem = null;
+            SortedList parms = new sSortedList( "PlanUId", planUId );
+
+            DataTable t = _da.GetDataSet( "[synps].[api_plan_sel]", parms, autoManageSqlConnection ).Tables[0];
+            if( t.Rows.Count > 0 )
+            {
+                PlanItemFactory factory = new PlanItemFactory();
+                planItem = factory.CreateRecord( t.Rows[0] );
+
+                if( validateRls )
+                {
+                    PlanContainer planContainer = GetPlanContainerByUId( planItem.PlanContainerUId );
+                    if( !HasRlsAccess( planContainer, _securityContext ) )
+                        throw new Exception( "You do not have rights to this record." );
+                }
+            }
+
+            return planItem;
         }
 
         public List<PlanItem> GetPlanByAny(Guid? planUId, string name, string uniqueName, string planFile, bool? planFileIsUri, Guid? planContainerUId, string createdBy, DateTime? createdTime, string modifiedBy, DateTime? modifiedTime)
         {
-            throw new NotImplementedException();
+            return new List<PlanItem>();
         }
 
         public PlanItem UpsertPlan(PlanItem plan)
@@ -48,15 +61,11 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
                 _da.ExecuteSP( "[synps].[api_plan_dml_ins]", parms, ref outparms, trans == null, trans );
 
-                trans.Commit();
-
                 plan.UId = (Guid)id.Value;
                 plan.InitialHashCode = plan.CurrentHashCode;
             }
             catch( Exception ex )
             {
-                trans.Rollback();
-
                 if( ex is SqlException )
                     if( ((SqlException)ex).Message.ToLower().Contains( "unique key" ) )
                         throw new Exception( "Validation Failed: One or more of the values provided are duplicate, please change." ); //ValidationException
@@ -129,6 +138,31 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 parms.Add( "@AuditModifiedBy", plan.AuditModifiedBy );
 
             return parms;
+        }
+    }
+
+    public class PlanItemFactory : SynapseRecordFactoryBase<PlanItem>
+    {
+        public override PlanItem CreateRecord(DataRow r)
+        {
+            PlanItem planItem = new PlanItem();
+
+            planItem.UId = r.GetColumnValueAsGuid( "PlanUId" );
+            planItem.Name = r.GetColumnValueAsString( "Name" );
+            planItem.Description = r.GetColumnValueAsString( "Description" );
+            planItem.UniqueName = r.GetColumnValueAsString( "UniqueName" );
+            planItem.IsActive = r.GetColumnValueAsBool( "IsActive" );
+            planItem.PlanFile = r.GetColumnValueAsString( "PlanFile" );
+            planItem.PlanFileIsUri = r.GetColumnValueAsBool( "PlanFileIsUri" );
+            planItem.PlanContainerUId = r.GetColumnValueAsGuid( "PlanContainerUId" );
+            planItem.AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" );
+            planItem.AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" );
+            planItem.AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" );
+            planItem.AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" );
+
+            planItem.InitialHashCode = planItem.CurrentHashCode;
+
+            return planItem;
         }
     }
 }

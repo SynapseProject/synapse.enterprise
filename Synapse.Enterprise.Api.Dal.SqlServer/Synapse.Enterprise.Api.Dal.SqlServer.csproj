@@ -55,6 +55,7 @@
     <Compile Include="CoreClasses\PlanContainer.cs" />
     <Compile Include="CoreClasses\PlanItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Suplex\SuplexSecurity.cs" />
     <Compile Include="tester.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -6,7 +6,7 @@ using Synapse.Services.Enterprise.Api.Common;
 
 namespace Synapse.Services.Enterprise.Api
 {
-    public class PlanContainer : SynapseRecordBase
+    public class PlanContainer : SynapseRecordBase, ISynapseSecureRecord
     {
         public string Description { get; set; }
         public string NodeUri { get; set; }
@@ -18,7 +18,8 @@ namespace Synapse.Services.Enterprise.Api
         {
             get
             {
-                throw new Exception( "need to do this next" );
+                return UId.GetHashCode() + GetStringHashCode( Name ) + GetStringHashCode( Description ) +
+                    GetStringHashCode( NodeUri ) + ParentUId.GetHashCode();
             }
         }
     }

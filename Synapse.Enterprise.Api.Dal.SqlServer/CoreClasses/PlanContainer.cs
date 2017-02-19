@@ -21,9 +21,9 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 PlanContainerFactory factory = new PlanContainerFactory();
                 planContainer = factory.CreateRecord( t.Rows[0] );
 
-                //if( validateRls )
-                //    if( !HasRlsAccess( planContainer, _securityContext ) )
-                //        throw new Exception( "You do not have rights to this record." );
+                if( validateRls )
+                    if( !HasRlsAccess( planContainer, _securityContext ) )
+                        throw new Exception( "You do not have rights to this record." );
             }
 
             return planContainer;

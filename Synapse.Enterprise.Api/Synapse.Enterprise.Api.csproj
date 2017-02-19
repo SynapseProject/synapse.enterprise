@@ -118,11 +118,11 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Synapse.Controller.Common\Synapse.Enterprise.Api.Common.csproj">
+    <ProjectReference Include="..\Synapse.Enterprise.Api.Common\Synapse.Enterprise.Api.Common.csproj">
       <Project>{c2d081ef-8454-4d63-8d36-ea67bb9183ea}</Project>
       <Name>Synapse.Enterprise.Api.Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Synapse.Server.HttpClient\Synapse.Enterprise.Api.HttpClient.csproj">
+    <ProjectReference Include="..\Synapse.Enterprise.Api.HttpClient\Synapse.Enterprise.Api.HttpClient.csproj">
       <Project>{059d8c9c-6397-422c-9ae1-9206a6c3d324}</Project>
       <Name>Synapse.Enterprise.Api.HttpClient</Name>
     </ProjectReference>

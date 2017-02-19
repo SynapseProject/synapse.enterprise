@@ -13,9 +13,9 @@ namespace Synapse.Services.Enterprise.Api.Dal
         static void Main(string[] args)
         {
             Tester t = new Tester();
-            t.CreatePlanContainer();
+            PlanContainer pc =            t.CreatePlanContainer();
+            PlanItem pi = t.CreatePlanItem( pc );
         }
-
 
         PlanContainer CreatePlanContainer()
         {
@@ -36,6 +36,31 @@ namespace Synapse.Services.Enterprise.Api.Dal
             pc = _dal.UpsertPlanContainer( pc );
 
             return pc;
+        }
+
+        private PlanItem CreatePlanItem(PlanContainer pc)
+        {
+            PlanItem pi = new PlanItem()
+            {
+                Name = "foo",
+                Description = "poo",
+                UniqueName = "uniqua",
+                IsActive = true,
+                PlanFile = "http://moo",
+                PlanFileIsUri = true,
+                PlanContainerUId = pc.UId,
+                AuditCreatedBy = "steve",
+                AuditModifiedBy = "stevo"
+            };
+
+            pi = _dal.UpsertPlan( pi );
+
+            pi = _dal.GetPlanByUId( pi.UId );
+
+            pi.Name += "foo";
+            pi = _dal.UpsertPlan( pi );
+
+            return pi;
         }
     }
 }

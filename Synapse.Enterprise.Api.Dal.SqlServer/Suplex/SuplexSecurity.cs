@@ -11,45 +11,13 @@ using Suplex.Security;
 using sg = Suplex.General;
 using ss = Suplex.Security.Standard;
 using Suplex.Data;
+using Synapse.Services.Enterprise.Api.Common;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
-    public partial class SuplexDal
-	{
+    public partial class SqlServerDal
+    {
         SuplexApiClient _splxApi = new SuplexApiClient();
-        SuplexStore _splxStore = null;
-        io.FileSystemWatcher filestoreWatcher;
-
-        DataAccessor _da;
-
-
-        public SuplexDal(string filestorePath)
-        {
-            string folder = io.Path.GetDirectoryName( filestorePath );
-            string file = io.Path.GetFileName( filestorePath );
-            filestoreWatcher = new io.FileSystemWatcher( folder, file );
-            filestoreWatcher.Changed += FilestoreWatcher_Changed;
-            filestoreWatcher.EnableRaisingEvents = true;
-
-            _splxStore = _splxApi.LoadFile( filestorePath );
-            IsFileStore = true;
-        }
-
-        private void FilestoreWatcher_Changed(object sender, io.FileSystemEventArgs e)
-        {
-            int attempts = 0;
-            while( attempts++ < 5 )
-            {
-                try
-                {
-                    _splxStore = _splxApi.LoadFile( e.FullPath );
-                }
-                catch { System.Threading.Thread.Sleep( 100 ); }
-            }
-        }
-
-        public bool IsFileStore { get; internal set; }
-
 
         public string ContainerRootUniqueName { get; set; } = "SynapseRoot";
         public string ContainerUniqueNamePrefix { get; set; }
@@ -68,10 +36,10 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return this.GetSuplexUser( resolve, true );
 		}
 
-		internal ss.User GetSuplexUser(bool resolve, bool resolveRls)
+		internal ss.User GetSuplexUser(bool resolve, bool resolveRls, string username = null)
 		{
-			string userName = WhoAmI();
-			ss.User user = new ss.User()
+            string userName = string.IsNullOrWhiteSpace( username ) ? this.SecurityContext : username;
+            ss.User user = new ss.User()
 			{
 				Name = userName,
 				CreateUnresolvedName = true
@@ -197,9 +165,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 				};
 			}
 
-            DataSet securityCache = IsFileStore ?
-                sm.Security.Load( _splxStore, slp ) :
-                sm.Security.Load( _splxApi, slp );
+            DataSet securityCache = sm.Security.Load( _splxApi, slp );
 
             return sm;
 		}
@@ -230,76 +196,46 @@ namespace Synapse.Services.Enterprise.Api.Dal
             SecureContainer ctrl = root;
             SplxSecureManagerBase context = null;
 
-            #region IsFileStore = true
-            if( IsFileStore )
+            DataSet ds = _da.GetDataSet( "splx.splx_dal_sel_security_byuserbyuie_up",
+                new System.Collections.sSortedList(
+                "@UIE_UNIQUE_NAME", uniqueName,
+                "@SPLX_USER_ID", slp.User.Id,
+                "@EXTERNAL_GROUP_LIST", egi.GroupsList ) );
+
+            _da.NameTablesFromCompositeSelect( ref ds );
+
+            //todo, when suplex is ready
+            //DataSet ds = _splxApi.GetSecurity( rootUniqueName, slp.User, slp.ExternalGroupInfo, future:recurseUp );
+
+            DataTable acl = ds.Tables["AclInfo"];
+            DataRow[] rows = acl.Select( string.Format( "UIE_UNIQUE_NAME = '{0}'", rootUniqueName ) );
+            if( rows.Length > 0 )
             {
-                ISecureControl c = new SplxRecordManager() { UniqueName = uniqueName };
-                if( aceType == AceType.FileSystem )
-                    c = new SplxFileSystemManager() { UniqueName = uniqueName };
-
-                splxApi.UIElement uie = _splxStore.UIElements.GetByUniqueNameRecursive( uniqueName );
-
-
-                SecureContainer parent = null;
-                IObjectModel parentObj = uie.ParentObject;
-                while( parentObj != null )
-                {
-                    uniqueName = ((splxApi.UIElement)parentObj).UniqueName;
-                    parent = new SecureContainer() { UniqueName = uniqueName };
-                    parent.Children.Add( c );
-                    c = parent;
-
-                    parentObj = parentObj.ParentObject;
-                }
-
-                parent.Security.Load( _splxStore, slp );
+                rows = acl.Select( string.Format( "UIE_PARENT_ID = '{0}'", rows[0]["SPLX_UI_ELEMENT_ID"] ) );
             }
-            #endregion
-            #region IsFileStore = false
-            else
+
+            while( rows.Length > 0 )
             {
-                DataSet ds = _da.GetDataSet( "splx.splx_dal_sel_security_byuserbyuie_up",
-                    new System.Collections.sSortedList(
-                    "@UIE_UNIQUE_NAME", uniqueName,
-                    "@SPLX_USER_ID", slp.User.Id,
-                    "@EXTERNAL_GROUP_LIST", egi.GroupsList ) );
-
-                _da.NameTablesFromCompositeSelect( ref ds );
-
-                //todo, when suplex is ready
-                //DataSet ds = _splxApi.GetSecurity( rootUniqueName, slp.User, slp.ExternalGroupInfo, future:recurseUp );
-
-                DataTable acl = ds.Tables["AclInfo"];
-                DataRow[] rows = acl.Select( string.Format( "UIE_UNIQUE_NAME = '{0}'", rootUniqueName ) );
-                if( rows.Length > 0 )
+                string un = rows[0]["UIE_UNIQUE_NAME"].ToString();
+                if( un.StartsWith( ContainerUniqueNamePrefix ) )
                 {
-                    rows = acl.Select( string.Format( "UIE_PARENT_ID = '{0}'", rows[0]["SPLX_UI_ELEMENT_ID"] ) );
+                    context = new SplxRecordManager() { UniqueName = un };
+                    if( aceType == AceType.FileSystem )
+                        context = new SplxFileSystemManager() { UniqueName = un };
+
+                    ctrl.Children.Add( context );
+                }
+                else
+                {
+                    SecureContainer child = new SecureContainer() { UniqueName = un };
+                    ctrl.Children.Add( child );
+                    ctrl = child;
                 }
 
-                while( rows.Length > 0 )
-                {
-                    string un = rows[0]["UIE_UNIQUE_NAME"].ToString();
-                    if( un.StartsWith( ContainerUniqueNamePrefix ) )
-                    {
-                        context = new SplxRecordManager() { UniqueName = un };
-                        if( aceType == AceType.FileSystem )
-                            context = new SplxFileSystemManager() { UniqueName = un };
-
-                        ctrl.Children.Add( context );
-                    }
-                    else
-                    {
-                        SecureContainer child = new SecureContainer() { UniqueName = un };
-                        ctrl.Children.Add( child );
-                        ctrl = child;
-                    }
-
-                    rows = acl.Select( string.Format( "UIE_PARENT_ID = '{0}'", rows[0]["SPLX_UI_ELEMENT_ID"] ) );
-                }
-
-                root.Security.Load( ds, slp );
+                rows = acl.Select( string.Format( "UIE_PARENT_ID = '{0}'", rows[0]["SPLX_UI_ELEMENT_ID"] ) );
             }
-            #endregion
+
+            root.Security.Load( ds, slp );
 
 
             return context;
@@ -482,9 +418,27 @@ namespace Synapse.Services.Enterprise.Api.Dal
 		public void UpdateSuplexRls(ContainerSecurityRecord rls, string assetType)
 		{
 		}
-	}
 
-	public enum UpdateType
+        public bool HasRlsAccess(ISynapseSecureRecord record, string userContext)
+        {
+            try
+            {
+                if( record == null )
+                    return false;
+
+                ss.User user = GetSuplexUser( true, true, userContext );
+                TryRowLevelSecurityOrException( record.RlsOwner, record.RlsMask, user );
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    public enum UpdateType
 	{
 		Record,
 		RecordOverride,
