@@ -30,8 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Suplex.Core">
-      <HintPath>..\packages\Suplex.Core.4.0.0.1\lib\net40\Suplex.Core.dll</HintPath>
+    <Reference Include="Suplex.Core, Version=4.0.0.1, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Suplex\Core\Core\bin\Debug\Suplex.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -44,8 +45,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SqlServerDal.cs" />
-    <Compile Include="PlanContainer.cs" />
-    <Compile Include="Plan.cs" />
+    <Compile Include="CoreClasses\PlanContainer.cs" />
+    <Compile Include="CoreClasses\PlanItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -57,6 +58,7 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

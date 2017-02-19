@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Suplex.Forms.ObjectModel.Api;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
@@ -47,11 +48,15 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
                 _da.ExecuteSP( "[snyps].[api_plan_dml_ins]", parms, ref outparms, trans == null, trans );
 
+                trans.Commit();
+
                 plan.UId = (Guid)id.Value;
                 plan.InitialHashCode = plan.CurrentHashCode;
             }
             catch( Exception ex )
             {
+                trans.Rollback();
+
                 if( ex is SqlException )
                     if( ((SqlException)ex).Message.ToLower().Contains( "unique key" ) )
                         throw new Exception( "Validation Failed: One or more of the values provided are duplicate, please change." ); //ValidationException
@@ -107,7 +112,23 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
         private SortedList GetPlanParms(PlanItem plan, bool forCreate)
         {
-            throw new NotImplementedException();
+            SortedList parms = new SortedList();
+
+            if( !forCreate ) parms.Add( "@PlanUId", plan.UId );
+            parms.Add( "@Name", plan.Name );
+            if( string.IsNullOrWhiteSpace( plan.Description ) ) parms.Add( "@Description", Convert.DBNull ); else parms.Add( "@Description", plan.Description );
+            parms.Add( "@UniqueName", plan.UniqueName );
+            parms.Add( "@IsActive", plan.IsActive );
+            parms.Add( "@PlanFile", plan.PlanFile );
+            parms.Add( "@PlanFileIsUri", plan.PlanFileIsUri );
+            parms.Add( "@PlanContainerUId", plan.PlanContainerUId );
+
+            if( forCreate )
+                parms.Add( "@AuditCreatedBy", plan.AuditCreatedBy );
+            else
+                parms.Add( "@AuditModifiedBy", plan.AuditModifiedBy );
+
+            return parms;
         }
     }
 }
