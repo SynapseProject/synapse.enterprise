@@ -87,14 +87,34 @@ namespace Synapse.Services.Enterprise.Api.Dal
 		{
 			return r.IsDBNullOrValue<DateTime>( field, default( DateTime ) );
 		}
-		/// <summary>
-		/// Gets the column value.
-		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="r">The r.</param>
-		/// <param name="field">The field.</param>
-		/// <returns>T.</returns>
-		public static T GetColumnValue<T>(this DataRow r, string field)
+        /// <summary>
+        /// Gets the column value as Guid.
+        /// </summary>
+        /// <param name="r">The DataRow containing the field.</param>
+        /// <param name="field">The field from the DataRow.</param>
+        /// <returns>The value as a Guid or default(Guid).</returns>
+        public static Guid GetColumnValueAsGuid(this DataRow r, string field)
+        {
+            return r.IsDBNullOrValue<Guid>( field, default( Guid ) );
+        }
+        /// <summary>
+        /// Gets the column value as byte[].
+        /// </summary>
+        /// <param name="r">The DataRow containing the field.</param>
+        /// <param name="field">The field from the DataRow.</param>
+        /// <returns>The value as a byte[] or default(byte[]).</returns>
+        public static byte[] GetColumnValueAsByteArray(this DataRow r, string field)
+        {
+            return r.IsDBNullOrValue<byte[]>( field, default( byte[] ) );
+        }
+        /// <summary>
+        /// Gets the column value.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="r">The r.</param>
+        /// <param name="field">The field.</param>
+        /// <returns>T.</returns>
+        public static T GetColumnValue<T>(this DataRow r, string field)
 		{
 			return r.IsDBNullOrValue<T>( field, default( T ) );
 		}

@@ -46,7 +46,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 id.Direction = ParameterDirection.InputOutput;
                 SortedList outparms = new sSortedList( "PlanUId", id );
 
-                _da.ExecuteSP( "[snyps].[api_plan_dml_ins]", parms, ref outparms, trans == null, trans );
+                _da.ExecuteSP( "[synps].[api_plan_dml_ins]", parms, ref outparms, trans == null, trans );
 
                 trans.Commit();
 
@@ -83,7 +83,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 if( plan.IsDirty )
                 {
                     SortedList parms = GetPlanParms( plan, false );
-                    _da.ExecuteSP( "[snyps].[api_plan_dml_upd]", parms, trans == null, trans );
+                    _da.ExecuteSP( "[synps].[api_plan_dml_upd]", parms, trans == null, trans );
 
                     plan.InitialHashCode = plan.CurrentHashCode;
                 }

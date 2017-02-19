@@ -10,8 +10,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
         PlanItem UpsertPlan(PlanItem plan);
         void DeletePlan(Guid planUId);
 
-        List<PlanContainer> GetPlanContainerByUId(Guid planContainerUId);
-        PlanContainer GetPlanContainerByAny(Guid? planContainerUId, string name, string nodeUri, string createdBy, DateTime? createdTime, string modifiedBy, DateTime? modifiedTime);
+        PlanContainer GetPlanContainerByUId(Guid planContainerUId, bool autoManageSqlConnection = true, bool validateRls = false);
+        List<PlanContainer> GetPlanContainerByAny(Guid? planContainerUId, string name, string nodeUri, string createdBy, DateTime? createdTime, string modifiedBy, DateTime? modifiedTime);
         PlanContainer UpsertPlanContainer(PlanContainer planContainer);
         void DeletePlanContainer(Guid planUId);
     }
