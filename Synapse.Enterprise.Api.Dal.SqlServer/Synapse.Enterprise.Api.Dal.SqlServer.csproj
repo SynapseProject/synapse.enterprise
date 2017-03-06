@@ -33,8 +33,9 @@
     <StartupObject>Synapse.Services.Enterprise.Api.Dal.Tester</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Suplex.BitLib">
-      <HintPath>..\packages\Suplex.Bitlib.1.0.0.3\lib\net35\Suplex.BitLib.dll</HintPath>
+    <Reference Include="Suplex.BitLib, Version=1.0.0.3, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Suplex.BitLib.1.0.0.3\lib\net35\Suplex.BitLib.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="Suplex.Core, Version=4.0.0.1, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -69,6 +70,9 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PreBuildEvent>powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File $(SolutionDir)scripts\setVersion.ps1 -path $(ProjectDir)Properties\AssemblyInfo.cs -versionFile $(SolutionDir)scripts\AssemblyInfo.xml</PreBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
