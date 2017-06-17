@@ -17,8 +17,6 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public partial class SqlServerDal
     {
-        SuplexApiClient _splxApi = new SuplexApiClient();
-
         public string ContainerRootUniqueName { get; set; } = "SynapseRoot";
         public string ContainerUniqueNamePrefix { get; set; }
         public string LdapRoot { get; set; }

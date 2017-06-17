@@ -3,8 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-
+using System.DirectoryServices;
 using Suplex.Forms.ObjectModel.Api;
+using ss = Suplex.Security;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
@@ -29,7 +30,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return planContainer;
         }
 
-        public List<PlanContainer> GetPlanContainerByAny(Guid? planContainerUId, string name, string nodeUri, string createdBy, DateTime? createdTime, string modifiedBy, DateTime? modifiedTime)
+        public List<PlanContainer> GetPlanContainerByAny(Guid? planContainerUId = null, string name = null, string nodeUri = null, string createdBy = null, DateTime? createdTime = null, string modifiedBy = null, DateTime? modifiedTime = null)
         {
             return new List<PlanContainer>();
         }
@@ -55,7 +56,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 trans = _da.Connection.BeginTransaction();
 
                 UIElement uie = GetUIElementFromPlanContainer( planContainer );
-                uie = _splx.UpsertUIElement( uie, trans );
+                uie = _splxDal.UpsertUIElement( uie, trans );
 
                 planContainer.UId = uie.Id;
                 SortedList parms = GetPlanContainerParms( planContainer, true );
@@ -96,7 +97,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 trans = _da.Connection.BeginTransaction();
 
                 UIElement uie = GetUIElementFromPlanContainer( planContainer );
-                uie = _splx.UpsertUIElement( uie, trans );
+                uie = _splxDal.UpsertUIElement( uie, trans );
 
                 SortedList parms = GetPlanContainerParms( planContainer, false );
                 _da.ExecuteSP( "[synps].[api_planContainer_dml_upd]", parms, trans == null, trans );
@@ -168,6 +169,285 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
             return parms;
         }
+
+
+        #region security
+        public ContainerSecurityRecord GetPermissionSets(Guid containerId)
+        {
+            return GetSecurityRecord( containerId );
+        }
+
+        public ContainerSecurityRecord GetSecurityRecord(Guid containerId)
+        {
+            return GetPlanContainerSecurity( containerId );
+        }
+
+        public void UpdateSecurityRecord(ContainerSecurityRecord csr)
+        {
+            PlanContainer container = GetPlanContainerByUId( csr.ContainerId );
+            foreach( PermissionSet perm in csr.Permissions )
+            {
+                UpdatePlanContainerPermission( container, csr.ContainerId, perm, csr.ContainerId );
+                // TODO : Make UpdateRls Part Of UpdatePermissionSet.  Execute Under Same SQLTransaction
+                UpdatePlanContainerRls( csr.ContainerId );
+            }
+        }
+
+        public void AddPermissionSet(Guid containerId, Guid groupId, PermissionRole role)
+        {
+            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
+
+            PermissionSet perm = new PermissionSet();
+            perm.State = RecordState.Added;
+            perm.GroupId = groupId;
+            perm.Rights = PermissionUtility.RightsFromRole( role );
+
+            csr.Permissions.Add( perm );
+            UpdateSecurityRecord( csr );
+        }
+
+        public void ModifyPermissionSet(Guid containerId, Guid groupId, PermissionRole role)
+        {
+            bool permFound = false;
+            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
+            foreach( PermissionSet perm in csr.Permissions )
+            {
+                if( perm.GroupId == groupId )
+                {
+                    perm.State = RecordState.Modified;
+                    perm.Rights = PermissionUtility.RightsFromRole( role );
+                    permFound = true;
+                }
+            }
+
+            if( permFound )
+                UpdateSecurityRecord( csr );
+            else
+                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + containerId + "]" );
+        }
+
+        public void DeletePermissionSet(Guid containerId, Guid groupId)
+        {
+            bool permFound = false;
+            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
+            foreach( PermissionSet perm in csr.Permissions )
+            {
+                if( perm.GroupId == groupId )
+                {
+                    perm.State = RecordState.Deleted;
+                    permFound = true;
+                }
+            }
+
+            if( permFound )
+                UpdateSecurityRecord( csr );
+            else
+                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + containerId + "]" );
+        }
+
+        public int RecalculateAllRlsMasks()
+        {
+            List<PlanContainer> containers = GetPlanContainerByAny();
+            foreach( PlanContainer container in containers )
+            {
+                Console.WriteLine( ">> Updating Rls Mask For PlanContainer [" + container.UId + "]." );
+                RecalculateRlsMask( container.UId );
+            }
+
+            return containers.Count;
+        }
+
+        public byte[] RecalculateRlsMask(Guid containerId)
+        {
+            return UpdatePlanContainerRls( containerId );
+        }
+
+        public bool ExistsInActiveDirectory(string userName, string ldapRoot = null, string ldapAuthUser = null, string ldapAuthPassword = null)
+        {
+            bool exists = false;
+            if( String.IsNullOrWhiteSpace( ldapRoot ) )
+                ldapRoot = LdapRoot;
+
+            String[] user = userName.Split( '\\' );
+            String name = user[0];
+            if( user.Length > 1 )
+                name = user[1];
+
+            if( !String.IsNullOrWhiteSpace( ldapRoot ) )
+            {
+                DirectoryEntry root = new DirectoryEntry( ldapRoot );
+                if( !String.IsNullOrWhiteSpace( ldapAuthUser ) )
+                {
+                    root.Username = ldapAuthUser;
+                    root.Password = ldapAuthPassword;
+                }
+
+                DirectorySearcher search = new DirectorySearcher( root );
+                search.Filter = "sAMAccountName=" + name;
+                search.PropertiesToLoad.Add( "sAMAccountName" );
+
+                SearchResult sr = search.FindOne();
+                if( sr != null )
+                    exists = true;
+            }
+
+            return exists;
+        }
+
+
+        #region dal
+        public ContainerSecurityRecord GetPlanContainerSecurity(Guid containerId)
+        {
+            ContainerSecurityRecord csr = new ContainerSecurityRecord();
+
+            try
+            {
+                _da.OpenConnection();
+
+                PlanContainer planContainer = GetPlanContainerByUId( containerId );
+
+                this.TrySecurityOrException( planContainer.Name,
+                    ss.AceType.FileSystem, ss.FileSystemRight.ReadPermissions, "PlanContainer", planContainer.RlsOwner );
+
+                UIElement planUie = _splxDal.GetUIElementByIdDeep( containerId.ToString() );
+                if( planUie == null )
+                    throw new Exception( String.Format( "PlanContainer [{0}] Does Not Exist.", containerId ) );
+
+                csr.ContainerId = planContainer.UId;
+                csr.RlsOwner = planContainer.RlsOwner.ToString();
+
+                foreach( AccessControlEntryBase ace in planUie.SecurityDescriptor.Dacl )
+                    csr.Permissions.Add( PermissionSet.FromAce( ace ) );
+
+                return csr;
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                _da.CloseConnection();
+            }
+
+        }
+
+        public void UpdatePlanContainerPermission(PlanContainer container, Guid uiElementId, PermissionSet perm, Guid containerId)
+        {
+            this.TrySecurityOrException( container.Name,
+                ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", container.RlsOwner );
+
+            try
+            {
+                _da.OpenConnection();
+
+                SortedList parms = new sSortedList();
+
+                if( perm.State == RecordState.Added || perm.State == RecordState.Modified )
+                {
+                    parms.Add( "@SPLX_ACE_ID", perm.Id );
+                    parms.Add( "@ACE_TRUSTEE_USER_GROUP_ID", perm.GroupId );
+                    parms.Add( "@SPLX_UI_ELEMENT_ID", uiElementId );
+                    parms.Add( "@ACE_ACCESS_MASK", perm.Rights );
+                    parms.Add( "@ACE_ACCESS_TYPE1", 1 );
+                    parms.Add( "@ACE_INHERIT", 1 );
+                    parms.Add( "@ACE_TYPE", "FileSystemAce" );
+
+                    _da.ExecuteSP( "splx.splx_api_upsert_ace", parms, false );
+                }
+                else if( perm.State == RecordState.Deleted )
+                {
+                    parms.Add( "@SPLX_ACE_ID", perm.Id );
+                    _da.ExecuteSP( "splx.splx_api_del_ace", parms, false );
+                }
+
+
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                _da.CloseConnection();
+            }
+        }
+
+        public byte[] UpdatePlanContainerRls(Guid containerId)
+        {
+            SqlTransaction trans = null;
+
+            try
+            {
+                _da.OpenConnection();
+                trans = _da.Connection.BeginTransaction();
+
+                PlanContainer container = GetPlanContainerByUId( containerId );
+
+                this.TrySecurityOrException( container.Name,
+                    ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", container.RlsOwner );
+
+
+                UIElement planUie = _splxDal.GetUIElementByIdDeep( containerId.ToString() );
+                if( planUie == null )
+                    throw new Exception( String.Format( "PlanContainer [{0}] Does Not Exist.", containerId ) );
+
+                List<byte[]> masks = new List<byte[]>();
+                foreach( UIAceDefault ace in planUie.SecurityDescriptor.Dacl )
+                {
+                    byte[] mask = new byte[0];
+                    ((Group)ace.SecurityPrincipal).Mask.CopyTo( mask, 0 );
+                    masks.Add( mask );
+                }
+
+                byte[] compositeMask = ContainerSecurityRecord.CalculateMask( masks );
+
+                //UpdatePlanContainerRow( containerId, container.Name, compositeMask, container.RlsOwner, container.Region.Name, trans );
+
+                trans.Commit();
+
+                return compositeMask;
+
+            }
+            catch( Exception )
+            {
+                trans.Rollback();
+                throw;
+            }
+            finally
+            {
+                _da.CloseConnection();
+            }
+
+        }
+        #endregion
+
+
+
+
+        #region rls calls
+        public List<PlanContainer> GetPlanContainersBySuplexGroupRls(Guid splxGroupId)
+        {
+            SortedList parms = new sSortedList( "@SPLX_GROUP_ID", splxGroupId );
+            DataTable t = _da.GetDataSet( "synps.api_planContainer_sel_group_rls", parms ).Tables[0];
+
+            PlanContainerFactory factory = new PlanContainerFactory();
+            List<PlanContainer> items = new List<PlanContainer>();
+            foreach( DataRow r in t.Rows )
+                items.Add( factory.CreateRecord( r ) );
+
+            return items;
+        }
+
+        public void DeletePlanContainerSuplexGroupRls(Guid splxGroupId)
+        {
+            this.TrySecurityOrException( "api_securityprincipaldlg_props", ss.AceType.Record, ss.RecordRight.Delete, "PlanContainer" );
+
+            SortedList parms = new sSortedList( "@SPLX_GROUP_ID", splxGroupId );
+            _da.ExecuteSP( "synps.api_planContainer_dml_del_group_rls", parms );
+        }
+        #endregion
+        #endregion
     }
 
     public class PlanContainerFactory : SynapseRecordFactoryBase<PlanContainer>

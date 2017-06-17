@@ -8,12 +8,12 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public class Tester
     {
-        SqlServerDal _dal = new SqlServerDal( ".\\sqlexpress", "synapse" );
+        SqlServerDal _dal = new SqlServerDal( ".\\devo", "synapse" );// new SqlServerDal( ".\\sqlexpress", "synapse" );
 
         static void Main(string[] args)
         {
             Tester t = new Tester();
-            PlanContainer pc =            t.CreatePlanContainer();
+            PlanContainer pc = t.CreatePlanContainer();
             PlanItem pi = t.CreatePlanItem( pc );
         }
 
