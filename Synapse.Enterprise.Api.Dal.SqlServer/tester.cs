@@ -8,34 +8,61 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public class Tester
     {
+        const string __root = "SynapseRoot";
         SqlServerDal _dal = new SqlServerDal( ".\\devo", "synapse" );// new SqlServerDal( ".\\sqlexpress", "synapse" );
 
         static void Main(string[] args)
         {
             Tester t = new Tester();
-            PlanContainer pc = t.CreatePlanContainer();
+            t._dal.SecurityContext = "steve";
+
+            PlanContainer root = t.CreatePlanContainer( __root, null );
+            PlanContainer pc = t.CreatePlanContainer( null, root.UId );
+            t.UpdateSecurityRecord( pc );
             PlanItem pi = t.CreatePlanItem( pc );
         }
 
-        PlanContainer CreatePlanContainer()
+        PlanContainer CreatePlanContainer(string name = null, Guid? parentId = null)
         {
             PlanContainer pc = new PlanContainer()
             {
-                Name = "Root_0",
+                Name = string.IsNullOrWhiteSpace( name ) ? $"Root_0_{DateTime.Now.Ticks}" : name,
                 Description = "first",
                 NodeUri = "http://foo",
                 AuditCreatedBy = "steve",
-                AuditModifiedBy = "stevo"
+                AuditModifiedBy = "stevo",
+                RlsOwner = Guid.Parse( "a61f281e-d80f-4ddf-856d-5f6eb7a20caa" )
             };
+            if( parentId.HasValue )
+                pc.ParentUId = parentId.Value;
 
             pc = _dal.UpsertPlanContainer( pc );
 
             pc = _dal.GetPlanContainerByUId( pc.UId );
 
-            pc.Name += "_foo";
-            pc = _dal.UpsertPlanContainer( pc );
+            if( name != __root )
+            {
+                pc.Name += "_foo";
+                pc = _dal.UpsertPlanContainer( pc );
+            }
 
             return pc;
+        }
+
+        void UpdateSecurityRecord(PlanContainer pc)
+        {
+            PermissionSet perm = new PermissionSet()
+            {
+                GroupId = Guid.Parse( "8E786183-592F-4322-A6B6-E4453E84A3D7" ),
+                State = RecordState.Added,
+                Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
+            };
+            ContainerSecurityRecord csr = new ContainerSecurityRecord()
+            {
+                ContainerId = pc.UId
+            };
+            csr.Permissions.Add( perm );
+            _dal.UpdateSecurityRecord( csr );
         }
 
         private PlanItem CreatePlanItem(PlanContainer pc)

@@ -131,12 +131,19 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return r.IsDBNullOrValue<T>( field, default( T ) );
 		}
 		public static T IsDBNullOrValue<T>(this DataRow r, string field)
-		{
-			return r.IsDBNullOrValue<T>( field, default( T ) );
-		}
-		public static T IsDBNullOrValue<T>(this DataRow r, string field, T altValue)
-		{
-			T value = default( T );
+        {
+            return r.IsDBNullOrValue<T>( field, default( T ) );
+        }
+        public static T IsDBNullOrValueChecked<T>(this DataRow r, string field)
+        {
+            if( r.Table.Columns.Contains( field ) )
+                return r.IsDBNullOrValue<T>( field, default( T ) );
+            else
+                return default( T );
+        }
+        public static T IsDBNullOrValue<T>(this DataRow r, string field, T altValue)
+        {
+            T value = default( T );
 
 			if( typeof( T ).IsEnum )
 			{

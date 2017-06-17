@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Data;
 
 //SecurityPrincipal/User/Group/Ace are copycats for Suplex objects, the intent being not to have a dependency on Suplex.Core.dll
 //see extension methods in Api
@@ -158,23 +159,34 @@ namespace Synapse.Services.Enterprise.Api.Dal
         }
     }
 
-    public class SuplexAce : INotifyPropertyChanged
+    public class SuplexAce
     {
         public string SecurityPrincipal { get; set; }
         public string Right { get; set; }
         public bool Allowed { get; set; }
+        public byte[] GroupMask { get; set; }
+    }
 
-        #region
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
+    public class SuplexAceFactory
+    {
+        public static List<SuplexAce> LoadTable(DataTable t)
         {
-            if( PropertyChanged != null )
-            {
-                PropertyChanged( this, new PropertyChangedEventArgs( propertyName ) );
-            }
+            List<SuplexAce> aces = new List<SuplexAce>();
+            foreach( DataRow r in t.Rows )
+                aces.Add( LoadRow( r ) );
+
+            return aces;
         }
-        #endregion
+
+        public static SuplexAce LoadRow(DataRow r)
+        {
+            return new SuplexAce()
+            {
+                Allowed = r.IsDBNullOrValueChecked<bool>( "ACE_ACCESS_TYPE1" ),
+                SecurityPrincipal = r.IsDBNullOrValueChecked<string>( "GROUP_NAME" ),
+                GroupMask = r.IsDBNullOrValueChecked<byte[]>( "GROUP_MASK" )
+            };
+        }
     }
 
     public class SuplexRlsSummaryRecord : INotifyPropertyChanged
@@ -261,7 +273,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
         public string RlsOwner { get; set; }
         public Guid RlsOwnerToGuid() { return Guid.Parse( this.RlsOwner ); }
         public byte[] RlsMask { get; set; }
-        public List<PermissionSet> Permissions { get; set; }
+        public List<PermissionSet> Permissions { get; set; } = new List<PermissionSet>();
 
         public static byte[] CalculateMask(List<byte[]> masks)
         {

@@ -175,7 +175,9 @@ namespace Synapse.Services.Enterprise.Api.Dal
         /// <returns>A loaded and resolved SplxRecordManager</returns>
         SplxSecureManagerBase GetSecureManagerSecurityRecurseUp(AceType aceType, string uniqueName, SecurityLoadParameters slp)
 		{
-			string rootUniqueName = ContainerRootUniqueName;
+            ContainerUniqueNamePrefix = "-";
+
+            string rootUniqueName = ContainerRootUniqueName;
 			SecureContainer root = new SecureContainer() { UniqueName = rootUniqueName };
 
             #region setup SecurityLoadParameters, load ExternalGroupInfo

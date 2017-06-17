@@ -145,7 +145,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
             uie.SecurityDescriptor.DaclInherit =
                 uie.SecurityDescriptor.SaclInherit = true;
-            uie.SecurityDescriptor.SaclAuditTypeFilter = (Suplex.Security.AuditType)31;
+            uie.SecurityDescriptor.SaclAuditTypeFilter = (ss.AuditType)31;
 
             return uie;
         }
@@ -337,88 +337,51 @@ namespace Synapse.Services.Enterprise.Api.Dal
             this.TrySecurityOrException( container.Name,
                 ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", container.RlsOwner );
 
-            try
+            SortedList parms = new sSortedList();
+
+            if( perm.State == RecordState.Added || perm.State == RecordState.Modified )
             {
-                _da.OpenConnection();
+                parms.Add( "@SPLX_ACE_ID", perm.Id );
+                parms.Add( "@ACE_TRUSTEE_USER_GROUP_ID", perm.GroupId );
+                parms.Add( "@SPLX_UI_ELEMENT_ID", uiElementId );
+                parms.Add( "@ACE_ACCESS_MASK", perm.Rights );
+                parms.Add( "@ACE_ACCESS_TYPE1", 1 );
+                parms.Add( "@ACE_INHERIT", 1 );
+                parms.Add( "@ACE_TYPE", "FileSystemAce" );
 
-                SortedList parms = new sSortedList();
-
-                if( perm.State == RecordState.Added || perm.State == RecordState.Modified )
-                {
-                    parms.Add( "@SPLX_ACE_ID", perm.Id );
-                    parms.Add( "@ACE_TRUSTEE_USER_GROUP_ID", perm.GroupId );
-                    parms.Add( "@SPLX_UI_ELEMENT_ID", uiElementId );
-                    parms.Add( "@ACE_ACCESS_MASK", perm.Rights );
-                    parms.Add( "@ACE_ACCESS_TYPE1", 1 );
-                    parms.Add( "@ACE_INHERIT", 1 );
-                    parms.Add( "@ACE_TYPE", "FileSystemAce" );
-
-                    _da.ExecuteSP( "splx.splx_api_upsert_ace", parms, false );
-                }
-                else if( perm.State == RecordState.Deleted )
-                {
-                    parms.Add( "@SPLX_ACE_ID", perm.Id );
-                    _da.ExecuteSP( "splx.splx_api_del_ace", parms, false );
-                }
-
-
+                _da.ExecuteSP( "splx.splx_api_upsert_ace", parms );
             }
-            catch
+            else if( perm.State == RecordState.Deleted )
             {
-                throw;
-            }
-            finally
-            {
-                _da.CloseConnection();
+                parms.Add( "@SPLX_ACE_ID", perm.Id );
+                _da.ExecuteSP( "splx.splx_api_del_ace", parms );
             }
         }
 
         public byte[] UpdatePlanContainerRls(Guid containerId)
         {
-            SqlTransaction trans = null;
+            PlanContainer planContainer = GetPlanContainerByUId( containerId );
 
-            try
-            {
-                _da.OpenConnection();
-                trans = _da.Connection.BeginTransaction();
+            this.TrySecurityOrException( planContainer.Name,
+                ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", planContainer.RlsOwner );
 
-                PlanContainer container = GetPlanContainerByUId( containerId );
+            //get the Aces for this PlanContainer, including the Groups for the Aces
+            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
+            SortedList parms = new SortedList();
+            parms.Add( "@SPLX_UI_ELEMENT_ID", containerId );
+            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
+            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
 
-                this.TrySecurityOrException( container.Name,
-                    ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", container.RlsOwner );
+            //Calculate the combined bitmask value for all the Groups for the Aces
+            List<byte[]> masks = new List<byte[]>();
+            foreach( SuplexAce ace in aces )
+                masks.Add( ace.GroupMask );
 
+            planContainer.RlsMask = ContainerSecurityRecord.CalculateMask( masks );
 
-                UIElement planUie = _splxDal.GetUIElementByIdDeep( containerId.ToString() );
-                if( planUie == null )
-                    throw new Exception( String.Format( "PlanContainer [{0}] Does Not Exist.", containerId ) );
+            UpdatePlanContainer( planContainer );
 
-                List<byte[]> masks = new List<byte[]>();
-                foreach( UIAceDefault ace in planUie.SecurityDescriptor.Dacl )
-                {
-                    byte[] mask = new byte[0];
-                    ((Group)ace.SecurityPrincipal).Mask.CopyTo( mask, 0 );
-                    masks.Add( mask );
-                }
-
-                byte[] compositeMask = ContainerSecurityRecord.CalculateMask( masks );
-
-                //UpdatePlanContainerRow( containerId, container.Name, compositeMask, container.RlsOwner, container.Region.Name, trans );
-
-                trans.Commit();
-
-                return compositeMask;
-
-            }
-            catch( Exception )
-            {
-                trans.Rollback();
-                throw;
-            }
-            finally
-            {
-                _da.CloseConnection();
-            }
-
+            return planContainer.RlsMask;
         }
         #endregion
 
