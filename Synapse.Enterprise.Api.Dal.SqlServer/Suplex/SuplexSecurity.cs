@@ -175,8 +175,6 @@ namespace Synapse.Services.Enterprise.Api.Dal
         /// <returns>A loaded and resolved SplxRecordManager</returns>
         SplxSecureManagerBase GetSecureManagerSecurityRecurseUp(AceType aceType, string uniqueName, SecurityLoadParameters slp)
 		{
-            ContainerUniqueNamePrefix = "-";
-
             string rootUniqueName = ContainerRootUniqueName;
 			SecureContainer root = new SecureContainer() { UniqueName = rootUniqueName };
 
@@ -217,7 +215,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
             while( rows.Length > 0 )
             {
                 string un = rows[0]["UIE_UNIQUE_NAME"].ToString();
-                if( un.StartsWith( ContainerUniqueNamePrefix ) )
+                if( un.Equals( uniqueName, StringComparison.OrdinalIgnoreCase ) )
                 {
                     context = new SplxRecordManager() { UniqueName = un };
                     if( aceType == AceType.FileSystem )

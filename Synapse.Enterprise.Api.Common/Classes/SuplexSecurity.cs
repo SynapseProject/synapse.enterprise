@@ -264,8 +264,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
     public class ContainerSecurityRecord
     {
-        public const int RlsMaskSizeBits = 2048;         // Next Values : 2048 and 256
-        public const int RlsMaskSizeBytes = 256;        //--> RlsMaskSizeBits / 8
+        public const int RlsMaskSizeBits = 65536;         // Next Values : 2048 and 256
+        public const int RlsMaskSizeBytes = 8192;        //--> RlsMaskSizeBits / 8
         public static byte[] GetEmptyRlsMask() { return new byte[RlsMaskSizeBytes]; }
         public static BitArray GetEmptyRlsBitArray() { return new BitArray( RlsMaskSizeBits ); }
 
