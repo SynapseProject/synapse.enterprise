@@ -185,16 +185,9 @@ namespace Synapse.Services.Enterprise.Api.Dal
             sec.PlanContainerUId = planContainer.UId;
             sec.RlsOwner = planContainer.RlsOwner.ToString();
 
-            //get the Aces for this PlanContainer, including the Groups for the Aces
-            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
-            SortedList parms = new SortedList();
-            parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
-            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
-            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
-
+            List<SuplexAce> aces = GetPlanContainerAces( planContainerUId );
             foreach( SuplexAce ace in aces )
                 sec.Permissions.Add( PermissionItem.FromAce( ace ) );
-
 
             return sec;
         }
@@ -266,14 +259,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
         {
             PlanContainer planContainer = GetPlanContainerByUId( planContainerUId );
 
-            //get the Aces for this PlanContainer, including the Groups for the Aces
-            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
-            SortedList parms = new SortedList();
-            parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
-            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
-            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
-
             //Calculate the combined bitmask value for all the Groups for the Aces
+            List<SuplexAce> aces = GetPlanContainerAces( planContainerUId );
             List<byte[]> masks = new List<byte[]>();
             foreach( SuplexAce ace in aces )
                 masks.Add( ace.GroupMask );
@@ -283,6 +270,16 @@ namespace Synapse.Services.Enterprise.Api.Dal
             UpdatePlanContainer( planContainer );
 
             return planContainer.RlsMask;
+        }
+
+        List<SuplexAce> GetPlanContainerAces(Guid planContainerUId)
+        {
+            //get the Aces for this PlanContainer, including the Groups for the Aces
+            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
+            SortedList parms = new SortedList();
+            parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
+            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
+            return SuplexAceFactory.LoadTable( ds.Tables[0] );
         }
         #endregion
 
