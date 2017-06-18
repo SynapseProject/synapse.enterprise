@@ -8,6 +8,12 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public partial class SqlServerDal : IEnterpriseDal
     {
+        public string ContainerRootUniqueName { get; set; } = "SynapseRoot";
+        //public string ContainerUniqueNamePrefix { get; set; }
+        public string LdapRoot { get; set; }
+        public string GlobalExternalGroupsCsv { get; set; }
+
+
         SuplexApiClient _splxApi = null;
         SuplexDataAccessLayer _splxDal = null;
         DataAccessor _da = null;

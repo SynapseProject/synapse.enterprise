@@ -42,22 +42,22 @@ namespace Synapse.Services.Enterprise.Api.Dal
         }
     }
 
-    public class PermissionSet
+    public class PermissionItem
     {
-        public long Id { get; set; }                     // Primary Key from Suplex Table
+        public int Id { get; set; }                     // Primary Key from Suplex Table
         public Guid GroupId { get; set; }               // Unique Id Of Container Security Group
         public string GroupName { get; set; }           // Name of Container Security Group
         public FileSystemRight Rights { get; set; }     // Group Rights to the Container
         public RecordState State { get; set; }          // Current State of the Record
 
-        public static PermissionSet FromAce(Suplex.Forms.ObjectModel.Api.AccessControlEntryBase ace)
+        public static PermissionItem FromAce(SuplexAce ace)
         {
-            PermissionSet perm = new PermissionSet();
+            PermissionItem perm = new PermissionItem();
 
             perm.Id = ace.Id;
-            perm.GroupId = Guid.Parse( ace.SecurityPrincipal.Id );
-            perm.GroupName = ace.SecurityPrincipal.Name;
-            perm.Rights = (FileSystemRight)ace.Right;
+            perm.GroupId = ace.SecurityPrincipalId;
+            perm.GroupName = ace.SecurityPrincipal;
+            perm.Rights = ace.Rights;
 
             return perm;
         }

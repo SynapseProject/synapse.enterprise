@@ -15,7 +15,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
         private string _name = string.Empty;
         private string _description = string.Empty;
         private bool _isLocal = false;
-        private BitArray _mask = ContainerSecurityRecord.GetEmptyRlsBitArray();
+        private BitArray _mask = PlanContainerSecurity.GetEmptyRlsBitArray();
 
         public string Id
         {
@@ -161,8 +161,11 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
     public class SuplexAce
     {
+        public int Id { get; set; }
         public string SecurityPrincipal { get; set; }
+        public Guid SecurityPrincipalId { get; set; }
         public string Right { get; set; }
+        public Suplex.Security.FileSystemRight Rights { get; set; }
         public bool Allowed { get; set; }
         public byte[] GroupMask { get; set; }
     }
@@ -182,8 +185,10 @@ namespace Synapse.Services.Enterprise.Api.Dal
         {
             return new SuplexAce()
             {
+                Id = r.IsDBNullOrValueChecked<int>( "SPLX_ACE_ID" ),
                 Allowed = r.IsDBNullOrValueChecked<bool>( "ACE_ACCESS_TYPE1" ),
                 SecurityPrincipal = r.IsDBNullOrValueChecked<string>( "GROUP_NAME" ),
+                SecurityPrincipalId = r.IsDBNullOrValueChecked<Guid>( "SPLX_GROUP_ID" ),
                 GroupMask = r.IsDBNullOrValueChecked<byte[]>( "GROUP_MASK" )
             };
         }
@@ -262,18 +267,18 @@ namespace Synapse.Services.Enterprise.Api.Dal
         #endregion
     }
 
-    public class ContainerSecurityRecord
+    public class PlanContainerSecurity
     {
         public const int RlsMaskSizeBits = 65536;         // Next Values : 2048 and 256
         public const int RlsMaskSizeBytes = 8192;        //--> RlsMaskSizeBits / 8
         public static byte[] GetEmptyRlsMask() { return new byte[RlsMaskSizeBytes]; }
         public static BitArray GetEmptyRlsBitArray() { return new BitArray( RlsMaskSizeBits ); }
 
-        public Guid ContainerId { get; set; }
+        public Guid PlanContainerUId { get; set; }
         public string RlsOwner { get; set; }
         public Guid RlsOwnerToGuid() { return Guid.Parse( this.RlsOwner ); }
         public byte[] RlsMask { get; set; }
-        public List<PermissionSet> Permissions { get; set; } = new List<PermissionSet>();
+        public List<PermissionItem> Permissions { get; set; } = new List<PermissionItem>();
 
         public static byte[] CalculateMask(List<byte[]> masks)
         {

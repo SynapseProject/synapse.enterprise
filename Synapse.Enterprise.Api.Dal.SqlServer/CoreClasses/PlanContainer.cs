@@ -11,6 +11,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public partial class SqlServerDal : IEnterpriseDal
     {
+        #region crud
         public PlanContainer GetPlanContainerByUId(Guid planContainerUId, bool autoManageSqlConnection = true, bool validateRls = false)
         {
             PlanContainer planContainer = null;
@@ -159,7 +160,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
             if( string.IsNullOrWhiteSpace( planContainer.Description ) ) parms.Add( "@Description", Convert.DBNull ); else parms.Add( "@Description", planContainer.Description );
             if( string.IsNullOrWhiteSpace( planContainer.NodeUri ) ) parms.Add( "@NodeUri", Convert.DBNull ); else parms.Add( "@NodeUri", planContainer.NodeUri );
             if( planContainer.RlsOwner == Guid.Empty ) parms.Add( "@RlsOwner", Convert.DBNull ); else parms.Add( "@RlsOwner", planContainer.RlsOwner );
-            if( planContainer.RlsMask == null ) parms.Add( "@RlsMask", ContainerSecurityRecord.GetEmptyRlsMask() ); else parms.Add( "@RlsMask", planContainer.RlsMask );
+            if( planContainer.RlsMask == null ) parms.Add( "@RlsMask", PlanContainerSecurity.GetEmptyRlsMask() ); else parms.Add( "@RlsMask", planContainer.RlsMask );
             if( planContainer.ParentUId == Guid.Empty ) parms.Add( "@ParentUId", Convert.DBNull ); else parms.Add( "@ParentUId", planContainer.ParentUId );
 
             if( forCreate )
@@ -169,48 +170,145 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
             return parms;
         }
+        #endregion
 
 
         #region security
-        public ContainerSecurityRecord GetPermissionSets(Guid containerId)
+        public PlanContainerSecurity GetPlanContainerSecurity(Guid planContainerUId)
         {
-            return GetSecurityRecord( containerId );
+            PlanContainer planContainer = GetPlanContainerByUId( planContainerUId );
+
+            TrySecurityOrException( planContainer.Name,
+                ss.AceType.FileSystem, ss.FileSystemRight.ReadPermissions, "PlanContainer", planContainer.RlsOwner );
+
+            PlanContainerSecurity sec = new PlanContainerSecurity();
+            sec.PlanContainerUId = planContainer.UId;
+            sec.RlsOwner = planContainer.RlsOwner.ToString();
+
+            //get the Aces for this PlanContainer, including the Groups for the Aces
+            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
+            SortedList parms = new SortedList();
+            parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
+            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
+            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
+
+            foreach( SuplexAce ace in aces )
+                sec.Permissions.Add( PermissionItem.FromAce( ace ) );
+
+
+            return sec;
         }
 
-        public ContainerSecurityRecord GetSecurityRecord(Guid containerId)
+        public void UpdatePlanContainerSecurity(PlanContainerSecurity sec)
         {
-            return GetPlanContainerSecurity( containerId );
-        }
+            PlanContainer planContainer = GetPlanContainerByUId( sec.PlanContainerUId );
 
-        public void UpdateSecurityRecord(ContainerSecurityRecord csr)
-        {
-            PlanContainer container = GetPlanContainerByUId( csr.ContainerId );
-            foreach( PermissionSet perm in csr.Permissions )
+            TrySecurityOrException( planContainer.Name,
+                ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", planContainer.RlsOwner );
+
+            foreach( PermissionItem perm in sec.Permissions )
             {
-                UpdatePlanContainerPermission( container, csr.ContainerId, perm, csr.ContainerId );
-                // TODO : Make UpdateRls Part Of UpdatePermissionSet.  Execute Under Same SQLTransaction
-                UpdatePlanContainerRls( csr.ContainerId );
+                UpdatePlanContainerPermission( sec.PlanContainerUId, perm );
+                //todo : make updaterls part of updatepermissionset.  execute under same sqltransaction
+                UpdatePlanContainerRls( sec.PlanContainerUId );
             }
         }
 
-        public void AddPermissionSet(Guid containerId, Guid groupId, PermissionRole role)
+        /// <summary>
+        /// Assesses the Dacl from a PlanContainer and updates RlsMask to match
+        /// </summary>
+        /// <param name="planContainerUId">The PlanContainer to update; pass [null] for all PlanContainers.</param>
+        /// <returns></returns>
+        public int RecalculatePlanContainerRlsMask(Guid? planContainerUId = null)
         {
-            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
+            if( planContainerUId.HasValue )
+            {
+                UpdatePlanContainerRls( planContainerUId.Value );
+                return 1;
+            }
+            else
+            {
+                List<PlanContainer> pcs = GetPlanContainerByAny();
+                foreach( PlanContainer pc in pcs )
+                    UpdatePlanContainerRls( pc.UId );
 
-            PermissionSet perm = new PermissionSet();
+                return pcs.Count;
+            }
+        }
+
+
+        #region utility methods
+        //todo: this really, really needs a transaction
+        void UpdatePlanContainerPermission(Guid planContainerUId, PermissionItem perm)
+        {
+            SortedList parms = new sSortedList();
+
+            if( perm.State == RecordState.Added || perm.State == RecordState.Modified )
+            {
+                parms.Add( "@SPLX_ACE_ID", perm.Id );
+                parms.Add( "@ACE_TRUSTEE_USER_GROUP_ID", perm.GroupId );
+                parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
+                parms.Add( "@ACE_ACCESS_MASK", perm.Rights );
+                parms.Add( "@ACE_ACCESS_TYPE1", 1 );
+                parms.Add( "@ACE_INHERIT", 1 );
+                parms.Add( "@ACE_TYPE", "FileSystemAce" );
+
+                _da.ExecuteSP( "splx.splx_api_upsert_ace", parms );
+            }
+            else if( perm.State == RecordState.Deleted )
+            {
+                parms.Add( "@SPLX_ACE_ID", perm.Id );
+                _da.ExecuteSP( "splx.splx_api_del_ace", parms );
+            }
+        }
+
+        byte[] UpdatePlanContainerRls(Guid planContainerUId)
+        {
+            PlanContainer planContainer = GetPlanContainerByUId( planContainerUId );
+
+            //get the Aces for this PlanContainer, including the Groups for the Aces
+            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
+            SortedList parms = new SortedList();
+            parms.Add( "@SPLX_UI_ELEMENT_ID", planContainerUId );
+            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
+            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
+
+            //Calculate the combined bitmask value for all the Groups for the Aces
+            List<byte[]> masks = new List<byte[]>();
+            foreach( SuplexAce ace in aces )
+                masks.Add( ace.GroupMask );
+
+            planContainer.RlsMask = PlanContainerSecurity.CalculateMask( masks );
+
+            UpdatePlanContainer( planContainer );
+
+            return planContainer.RlsMask;
+        }
+        #endregion
+
+
+        #region obsolete?
+        [Obsolete( "not in use" )]
+        void AddPermissionSet(Guid planContainerUId, Guid groupId, PermissionRole role)
+        {
+            PlanContainerSecurity sec = GetPlanContainerSecurity( planContainerUId );
+
+            PermissionItem perm = new PermissionItem();
             perm.State = RecordState.Added;
             perm.GroupId = groupId;
             perm.Rights = PermissionUtility.RightsFromRole( role );
 
-            csr.Permissions.Add( perm );
-            UpdateSecurityRecord( csr );
+            sec.Permissions.Add( perm );
+
+            UpdatePlanContainerSecurity( sec );
         }
 
-        public void ModifyPermissionSet(Guid containerId, Guid groupId, PermissionRole role)
+        [Obsolete( "not in use" )]
+        void ModifyPermissionSet(Guid planContainerUId, Guid groupId, PermissionRole role)
         {
             bool permFound = false;
-            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
-            foreach( PermissionSet perm in csr.Permissions )
+            PlanContainerSecurity sec = GetPlanContainerSecurity( planContainerUId );
+            foreach( PermissionItem perm in sec.Permissions )
             {
                 if( perm.GroupId == groupId )
                 {
@@ -221,16 +319,17 @@ namespace Synapse.Services.Enterprise.Api.Dal
             }
 
             if( permFound )
-                UpdateSecurityRecord( csr );
+                UpdatePlanContainerSecurity( sec );
             else
-                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + containerId + "]" );
+                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + planContainerUId + "]" );
         }
 
-        public void DeletePermissionSet(Guid containerId, Guid groupId)
+        [Obsolete( "not in use" )]
+        void DeletePermissionSet(Guid planContainerUId, Guid groupId)
         {
             bool permFound = false;
-            ContainerSecurityRecord csr = GetSecurityRecord( containerId );
-            foreach( PermissionSet perm in csr.Permissions )
+            PlanContainerSecurity sec = GetPlanContainerSecurity( planContainerUId );
+            foreach( PermissionItem perm in sec.Permissions )
             {
                 if( perm.GroupId == groupId )
                 {
@@ -240,29 +339,13 @@ namespace Synapse.Services.Enterprise.Api.Dal
             }
 
             if( permFound )
-                UpdateSecurityRecord( csr );
+                UpdatePlanContainerSecurity( sec );
             else
-                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + containerId + "]" );
+                throw new Exception( "Group Id [" + groupId + "] Does Not Have Any Permissions On PlanContainer Id [" + planContainerUId + "]" );
         }
 
-        public int RecalculateAllRlsMasks()
-        {
-            List<PlanContainer> containers = GetPlanContainerByAny();
-            foreach( PlanContainer container in containers )
-            {
-                Console.WriteLine( ">> Updating Rls Mask For PlanContainer [" + container.UId + "]." );
-                RecalculateRlsMask( container.UId );
-            }
-
-            return containers.Count;
-        }
-
-        public byte[] RecalculateRlsMask(Guid containerId)
-        {
-            return UpdatePlanContainerRls( containerId );
-        }
-
-        public bool ExistsInActiveDirectory(string userName, string ldapRoot = null, string ldapAuthUser = null, string ldapAuthPassword = null)
+        [Obsolete( "not in use" )]
+        bool ExistsInActiveDirectory(string userName, string ldapRoot = null, string ldapAuthUser = null, string ldapAuthPassword = null)
         {
             bool exists = false;
             if( String.IsNullOrWhiteSpace( ldapRoot ) )
@@ -294,102 +377,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return exists;
         }
 
-
-        #region dal
-        public ContainerSecurityRecord GetPlanContainerSecurity(Guid containerId)
-        {
-            ContainerSecurityRecord csr = new ContainerSecurityRecord();
-
-            try
-            {
-                _da.OpenConnection();
-
-                PlanContainer planContainer = GetPlanContainerByUId( containerId );
-
-                this.TrySecurityOrException( planContainer.Name,
-                    ss.AceType.FileSystem, ss.FileSystemRight.ReadPermissions, "PlanContainer", planContainer.RlsOwner );
-
-                UIElement planUie = _splxDal.GetUIElementByIdDeep( containerId.ToString() );
-                if( planUie == null )
-                    throw new Exception( String.Format( "PlanContainer [{0}] Does Not Exist.", containerId ) );
-
-                csr.ContainerId = planContainer.UId;
-                csr.RlsOwner = planContainer.RlsOwner.ToString();
-
-                foreach( AccessControlEntryBase ace in planUie.SecurityDescriptor.Dacl )
-                    csr.Permissions.Add( PermissionSet.FromAce( ace ) );
-
-                return csr;
-            }
-            catch
-            {
-                throw;
-            }
-            finally
-            {
-                _da.CloseConnection();
-            }
-
-        }
-
-        public void UpdatePlanContainerPermission(PlanContainer container, Guid uiElementId, PermissionSet perm, Guid containerId)
-        {
-            this.TrySecurityOrException( container.Name,
-                ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", container.RlsOwner );
-
-            SortedList parms = new sSortedList();
-
-            if( perm.State == RecordState.Added || perm.State == RecordState.Modified )
-            {
-                parms.Add( "@SPLX_ACE_ID", perm.Id );
-                parms.Add( "@ACE_TRUSTEE_USER_GROUP_ID", perm.GroupId );
-                parms.Add( "@SPLX_UI_ELEMENT_ID", uiElementId );
-                parms.Add( "@ACE_ACCESS_MASK", perm.Rights );
-                parms.Add( "@ACE_ACCESS_TYPE1", 1 );
-                parms.Add( "@ACE_INHERIT", 1 );
-                parms.Add( "@ACE_TYPE", "FileSystemAce" );
-
-                _da.ExecuteSP( "splx.splx_api_upsert_ace", parms );
-            }
-            else if( perm.State == RecordState.Deleted )
-            {
-                parms.Add( "@SPLX_ACE_ID", perm.Id );
-                _da.ExecuteSP( "splx.splx_api_del_ace", parms );
-            }
-        }
-
-        public byte[] UpdatePlanContainerRls(Guid containerId)
-        {
-            PlanContainer planContainer = GetPlanContainerByUId( containerId );
-
-            this.TrySecurityOrException( planContainer.Name,
-                ss.AceType.FileSystem, ss.FileSystemRight.ChangePermissions, "PlanContainer", planContainer.RlsOwner );
-
-            //get the Aces for this PlanContainer, including the Groups for the Aces
-            // - note: the SP below only selects valid aces: group.Enabled = true, ace.Allowed = true, ace.IsAuditAce = false
-            SortedList parms = new SortedList();
-            parms.Add( "@SPLX_UI_ELEMENT_ID", containerId );
-            DataSet ds = _da.GetDataSet( "[synps].[api_splxElement_AceGroups_sel]", parms );
-            List<SuplexAce> aces = SuplexAceFactory.LoadTable( ds.Tables[0] );
-
-            //Calculate the combined bitmask value for all the Groups for the Aces
-            List<byte[]> masks = new List<byte[]>();
-            foreach( SuplexAce ace in aces )
-                masks.Add( ace.GroupMask );
-
-            planContainer.RlsMask = ContainerSecurityRecord.CalculateMask( masks );
-
-            UpdatePlanContainer( planContainer );
-
-            return planContainer.RlsMask;
-        }
-        #endregion
-
-
-
-
-        #region rls calls
-        public List<PlanContainer> GetPlanContainersBySuplexGroupRls(Guid splxGroupId)
+        [Obsolete( "not in use" )]
+        List<PlanContainer> GetPlanContainersBySuplexGroupRls(Guid splxGroupId)
         {
             SortedList parms = new sSortedList( "@SPLX_GROUP_ID", splxGroupId );
             DataTable t = _da.GetDataSet( "synps.api_planContainer_sel_group_rls", parms ).Tables[0];
@@ -402,7 +391,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return items;
         }
 
-        public void DeletePlanContainerSuplexGroupRls(Guid splxGroupId)
+        [Obsolete( "not in use" )]
+        void DeletePlanContainerSuplexGroupRls(Guid splxGroupId)
         {
             this.TrySecurityOrException( "api_securityprincipaldlg_props", ss.AceType.Record, ss.RecordRight.Delete, "PlanContainer" );
 

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
@@ -51,18 +48,20 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
         void UpdateSecurityRecord(PlanContainer pc)
         {
-            PermissionSet perm = new PermissionSet()
+            PermissionItem perm = new PermissionItem()
             {
                 GroupId = Guid.Parse( "8E786183-592F-4322-A6B6-E4453E84A3D7" ),
                 State = RecordState.Added,
                 Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
             };
-            ContainerSecurityRecord csr = new ContainerSecurityRecord()
+            PlanContainerSecurity csr = new PlanContainerSecurity()
             {
-                ContainerId = pc.UId
+                PlanContainerUId = pc.UId
             };
             csr.Permissions.Add( perm );
-            _dal.UpdateSecurityRecord( csr );
+            _dal.UpdatePlanContainerSecurity( csr );
+
+            PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( pc.UId );
         }
 
         private PlanItem CreatePlanItem(PlanContainer pc)

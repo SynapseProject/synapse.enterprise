@@ -17,11 +17,6 @@ namespace Synapse.Services.Enterprise.Api.Dal
 {
     public partial class SqlServerDal
     {
-        public string ContainerRootUniqueName { get; set; } = "SynapseRoot";
-        public string ContainerUniqueNamePrefix { get; set; }
-        public string LdapRoot { get; set; }
-        public string GlobalExternalGroupsCsv { get; set; }
-
         //stub method
         private string WhoAmI()
         {
@@ -29,12 +24,12 @@ namespace Synapse.Services.Enterprise.Api.Dal
         }
 
 
-        internal ss.User GetSuplexUser(bool resolve)
+        private ss.User GetSuplexUser(bool resolve)
 		{
 			return this.GetSuplexUser( resolve, true );
 		}
 
-		internal ss.User GetSuplexUser(bool resolve, bool resolveRls, string username = null)
+        private ss.User GetSuplexUser(bool resolve, bool resolveRls, string username = null)
 		{
             string userName = string.IsNullOrWhiteSpace( username ) ? this.SecurityContext : username;
             ss.User user = new ss.User()
@@ -84,13 +79,13 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return user;
 		}
 
-        public SuplexUserRecord GetCurrentSuplexUser()
+        private SuplexUserRecord GetCurrentSuplexUser()
 		{
 			ss.User user = this.GetSuplexUser( true );
 			return user.FromSuplexNative();
 		}
 
-		public SuplexUserRecord GetSuplexUserByName(string name)
+        private SuplexUserRecord GetSuplexUserByName(string name)
 		{
 			ss.User user = new ss.User()
 			{
@@ -103,7 +98,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return user.FromSuplexNative();
 		}
 
-		public SuplexUserRecord GetSuplexResolvedUserByName(string name)
+        private SuplexUserRecord GetSuplexResolvedUserByName(string name)
 		{
 			ss.User user = new ss.User()
 			{
@@ -116,7 +111,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return user.FromSuplexNative();
 		}
 
-		public string GetSuplexSecurity(string uniqueName)
+        private string GetSuplexSecurity(string uniqueName)
 		{
 			SecurityLoadParameters slp = new SecurityLoadParameters()
 			{
@@ -130,7 +125,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return ser.SerializeSecurityToStringFromDataSet( ds );
 		}
 
-		public SuplexStore GetSuplexStore(string uniqueName)
+        private SuplexStore GetSuplexStore(string uniqueName)
 		{
 			SecurityLoadParameters slp = new SecurityLoadParameters()
 			{
@@ -358,23 +353,17 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return string.Format( "You do not have {0} rights to {1} records.", right.ToString(), assetType );
 		}
 
-		public SuplexRlsSummaryRecord GetSuplexRls(int id, string source, string uieUniqueName)
+		SuplexRlsSummaryRecord GetSuplexRls(int id, string source, string uieUniqueName)
 		{
 			string sp = string.Empty;
 			string parm = string.Empty;
 
 			switch( source.ToLower() )
 			{
-				case "packagegroup":
+				case "plancontainer":
 				{
-					sp = "TPTR.api_package_group_sel_rls";
-					parm = "@PACKAGE_GROUP_ID";
-					break;
-				}
-				case "request":
-				{
-					sp = "TPTR.api_release_sel_rls";
-					parm = "@RELEASE_ID";
+					sp = "";
+					parm = "@";
 					break;
 				}
 			}
@@ -413,11 +402,11 @@ namespace Synapse.Services.Enterprise.Api.Dal
 		}
 
 		//for setting container Rls
-		public void UpdateSuplexRls(ContainerSecurityRecord rls, string assetType)
+		void UpdateSuplexRls(PlanContainerSecurity rls, string assetType)
 		{
 		}
 
-        public bool HasRlsAccess(ISynapseSecureRecord record, string userContext)
+        bool HasRlsAccess(ISynapseSecureRecord record, string userContext)
         {
             try
             {
