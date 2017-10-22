@@ -33,12 +33,16 @@
     <StartupObject>Synapse.Services.Enterprise.Api.Dal.Tester</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Interop.MSScriptControl, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Interop.MSScriptControl.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
     <Reference Include="Suplex.BitLib, Version=1.0.0.3, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Suplex.BitLib.1.0.0.3\lib\net35\Suplex.BitLib.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Suplex.Core">
-      <HintPath>..\..\..\git\Suplex\Core\Core\bin\Debug\Suplex.Core.dll</HintPath>
+    <Reference Include="Suplex.Core, Version=4.0.0.2, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Suplex.Core.dll</HintPath>
     </Reference>
     <Reference Include="Synapse.Core, Version=0.1.0.0, Culture=neutral, PublicKeyToken=a6de1cc56b73f982, processorArchitecture=MSIL">
       <HintPath>..\packages\Synapse.Core.Signed.0.1.17166.0-beta\lib\net45\Synapse.Core.dll</HintPath>

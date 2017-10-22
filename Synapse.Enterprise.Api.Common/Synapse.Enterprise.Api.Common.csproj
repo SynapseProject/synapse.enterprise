@@ -31,12 +31,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Interop.MSScriptControl, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Suplex.Core.4.0.0.1\lib\net40\Interop.MSScriptControl.dll</HintPath>
+      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Interop.MSScriptControl.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
     </Reference>
-    <Reference Include="Suplex.Core, Version=4.0.0.1, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Suplex.Core.4.0.0.1\lib\net40\Suplex.Core.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Suplex.Core, Version=4.0.0.2, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Suplex.Core.dll</HintPath>
     </Reference>
     <Reference Include="Synapse.Core">
       <HintPath>..\..\synapse.core.net\Synapse.Core\bin\Debug\Synapse.Core.dll</HintPath>
