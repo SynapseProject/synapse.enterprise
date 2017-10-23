@@ -10,7 +10,7 @@ namespace Synapse.Services.Enterprise.Api
     {
         public string Description { get; set; }
         public string NodeUri { get; set; }
-        public Guid ParentUId { get; set; }
+        public Guid? ParentUId { get; set; }
         public Guid RlsOwner { get; set; }
         public byte[] RlsMask { get; set; }
 
@@ -19,7 +19,7 @@ namespace Synapse.Services.Enterprise.Api
             get
             {
                 return UId.GetHashCode() + GetStringHashCode( Name ) + GetStringHashCode( Description ) +
-                    GetStringHashCode( NodeUri ) + ParentUId.GetHashCode();
+                    GetStringHashCode( NodeUri ) + GetGuidHashCode( ParentUId );
             }
         }
     }

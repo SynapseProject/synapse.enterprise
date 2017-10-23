@@ -56,6 +56,10 @@ namespace Synapse.Services.Enterprise.Api.Common
         {
             return s != null ? s.GetHashCode() : string.Empty.GetHashCode();
         }
+        protected int GetGuidHashCode(Guid? g)
+        {
+            return g.HasValue ? g.GetHashCode() : 0;
+        }
 
         public virtual void SetOwner(Guid ownerUId) { }
 

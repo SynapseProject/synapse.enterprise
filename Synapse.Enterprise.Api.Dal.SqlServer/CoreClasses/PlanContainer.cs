@@ -138,7 +138,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 Name = planContainer.Name,
                 UniqueName = planContainer.Name,
                 ControlType = "SplxFileSystemManager",
-                ParentId = planContainer.ParentUId
+                ParentId = planContainer.ParentUId.GetValueOrDefault()
             };
 
             if( !planContainer.IsNew )
@@ -153,15 +153,17 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
         private SortedList GetPlanContainerParms(PlanContainer planContainer, bool forCreate)
         {
-            SortedList parms = new SortedList();
+            SortedList parms = new SortedList
+            {
+                { "@PlanContainerUId", planContainer.UId },
+                { "@Name", planContainer.Name }
+            };
 
-            parms.Add( "@PlanContainerUId", planContainer.UId );
-            parms.Add( "@Name", planContainer.Name );
             if( string.IsNullOrWhiteSpace( planContainer.Description ) ) parms.Add( "@Description", Convert.DBNull ); else parms.Add( "@Description", planContainer.Description );
             if( string.IsNullOrWhiteSpace( planContainer.NodeUri ) ) parms.Add( "@NodeUri", Convert.DBNull ); else parms.Add( "@NodeUri", planContainer.NodeUri );
             if( planContainer.RlsOwner == Guid.Empty ) parms.Add( "@RlsOwner", Convert.DBNull ); else parms.Add( "@RlsOwner", planContainer.RlsOwner );
             if( planContainer.RlsMask == null ) parms.Add( "@RlsMask", PlanContainerSecurity.GetEmptyRlsMask() ); else parms.Add( "@RlsMask", planContainer.RlsMask );
-            if( planContainer.ParentUId == Guid.Empty ) parms.Add( "@ParentUId", Convert.DBNull ); else parms.Add( "@ParentUId", planContainer.ParentUId );
+            if( !planContainer.ParentUId.HasValue || planContainer.ParentUId == Guid.Empty ) parms.Add( "@ParentUId", Convert.DBNull ); else parms.Add( "@ParentUId", planContainer.ParentUId );
 
             if( forCreate )
                 parms.Add( "@AuditCreatedBy", planContainer.AuditCreatedBy );
@@ -404,19 +406,20 @@ namespace Synapse.Services.Enterprise.Api.Dal
     {
         public override PlanContainer CreateRecord(DataRow r)
         {
-            PlanContainer planContainer = new PlanContainer();
-
-            planContainer.UId = r.GetColumnValueAsGuid( "PlanContainerUId" );
-            planContainer.Name = r.GetColumnValueAsString( "Name" );
-            planContainer.Description = r.GetColumnValueAsString( "Description" );
-            planContainer.NodeUri = r.GetColumnValueAsString( "NodeUri" );
-            planContainer.RlsOwner = r.GetColumnValueAsGuid( "RlsOwner" );
-            planContainer.RlsMask = r.GetColumnValueAsByteArray( "RlsMask" );
-            planContainer.ParentUId = r.GetColumnValueAsGuid( "ParentUId" );
-            planContainer.AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" );
-            planContainer.AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" );
-            planContainer.AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" );
-            planContainer.AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" );
+            PlanContainer planContainer = new PlanContainer
+            {
+                UId = r.GetColumnValueAsGuid( "PlanContainerUId" ),
+                Name = r.GetColumnValueAsString( "Name" ),
+                Description = r.GetColumnValueAsString( "Description" ),
+                NodeUri = r.GetColumnValueAsString( "NodeUri" ),
+                RlsOwner = r.GetColumnValueAsGuid( "RlsOwner" ),
+                RlsMask = r.GetColumnValueAsByteArray( "RlsMask" ),
+                ParentUId = r.GetColumnValueAsGuid( "ParentUId" ),
+                AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" ),
+                AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" ),
+                AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" ),
+                AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" )
+            };
 
             planContainer.InitialHashCode = planContainer.CurrentHashCode;
 

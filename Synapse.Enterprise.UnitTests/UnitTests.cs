@@ -9,35 +9,50 @@ namespace Synapse.Enterprise.UnitTests
     public class UnitTests
     {
         const string __root = "SynapseRoot";
+        const string __unit = "SynapseUnitTest";
         SqlServerDal _dal = new SqlServerDal( "(localdb)\\MSSQLLocalDB", "synapse" );// new SqlServerDal( ".\\sqlexpress", "synapse" );
-
-        static void Main(string[] args)
-        {
-            UnitTests t = new UnitTests();
-            PlanContainer root = t.CreatePlanContainer( __root, null );
-            PlanContainer pc = t.CreatePlanContainer( null, root.UId );
-            t.UpdateSecurityRecord( pc );
-            PlanItem pi = t.CreatePlanItem( pc );
-        }
 
         [OneTimeSetUp]
         public void Init()
         {
-            Environment.CurrentDirectory = __root;
-            System.IO.Directory.SetCurrentDirectory( __root );
-
             _dal.SecurityContext = "steve";
         }
 
         [Test]
         [Category( "PlanContainer" )]
+        void WarpFactorLove()
+        {
+            Guid rootId = Guid.NewGuid();
+            PlanContainer root = UpsertPlanContainer( rootId, __root, null );
+            PlanContainer groot = _dal.GetPlanContainerByUId( root.UId );
+
+            Assert.AreEqual( root.CurrentHashCode, groot.CurrentHashCode );
+
+
+            Guid childId = Guid.NewGuid();
+            PlanContainer child = UpsertPlanContainer( childId, null, root.UId );
+            child.Name += "_foo";
+            child = _dal.UpsertPlanContainer( child );
+            PlanContainer quiddo = _dal.GetPlanContainerByUId( child.UId );
+
+            Assert.AreEqual( child.CurrentHashCode, quiddo.CurrentHashCode );
+            Assert.AreEqual( root.UId, quiddo.ParentUId.GetValueOrDefault() );
+
+
+            //UpdateSecurityRecord( child );
+            //PlanItem pi = CreatePlanItem( child );
+        }
+
+        [Test]
+        [Category( "PlanContainer" )]
         [TestCase( __root )]
-        PlanContainer CreatePlanContainer(string name = null, Guid? parentId = null)
+        PlanContainer UpsertPlanContainer(Guid containerId, string name = null, Guid? parentId = null)
         {
             PlanContainer pc = new PlanContainer()
             {
+                UId = containerId,
                 Name = string.IsNullOrWhiteSpace( name ) ? $"Root_0_{DateTime.Now.Ticks}" : name,
-                Description = "first",
+                Description = __unit,
                 NodeUri = "http://foo",
                 AuditCreatedBy = "steve",
                 AuditModifiedBy = "stevo",
@@ -48,20 +63,11 @@ namespace Synapse.Enterprise.UnitTests
 
             pc = _dal.UpsertPlanContainer( pc );
 
-            pc = _dal.GetPlanContainerByUId( pc.UId );
-
-            if( name != __root )
-            {
-                pc.Name += "_foo";
-                pc = _dal.UpsertPlanContainer( pc );
-            }
-
             return pc;
         }
 
         [Test]
         [Category( "PlanContainer" )]
-        [TestCase( __root )]
         void UpdateSecurityRecord(PlanContainer pc)
         {
             PermissionItem perm = new PermissionItem()
@@ -81,8 +87,7 @@ namespace Synapse.Enterprise.UnitTests
         }
 
         [Test]
-        [Category( "PlanContainer" )]
-        [TestCase( __root )]
+        [Category( "PlanItem" )]
         private PlanItem CreatePlanItem(PlanContainer pc)
         {
             PlanItem pi = new PlanItem()
