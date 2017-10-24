@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.DirectoryServices;
+
 using Suplex.Forms.ObjectModel.Api;
 using ss = Suplex.Security;
 
@@ -56,9 +57,11 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 _da.OpenConnection();
                 trans = _da.Connection.BeginTransaction();
 
-                UIElement uie = GetUIElementFromPlanContainer( planContainer );
+                //create Suplex security element
+                UIElement uie = GetSuplexUIElementFromPlanContainer( planContainer );
                 uie = _splxDal.UpsertUIElement( uie, trans );
 
+                //assign the splx element id to the planContainer.id.
                 planContainer.UId = uie.Id;
                 SortedList parms = GetPlanContainerParms( planContainer, true );
                 _da.ExecuteSP( "[synps].[api_planContainer_dml_ins]", parms, trans == null, trans );
@@ -97,9 +100,11 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 _da.OpenConnection();
                 trans = _da.Connection.BeginTransaction();
 
-                UIElement uie = GetUIElementFromPlanContainer( planContainer );
+                //update Suplex security element
+                UIElement uie = GetSuplexUIElementFromPlanContainer( planContainer );
                 uie = _splxDal.UpsertUIElement( uie, trans );
 
+                //update the planContainer, no hook to the splx element on this pass
                 SortedList parms = GetPlanContainerParms( planContainer, false );
                 _da.ExecuteSP( "[synps].[api_planContainer_dml_upd]", parms, trans == null, trans );
 
@@ -125,13 +130,38 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return planContainer;
         }
 
-        public void DeletePlanContainer(Guid planUId)
+        //todo: make recursive
+        public void DeletePlanContainer(Guid planContainerUId)
         {
-            throw new NotImplementedException();
+            //check RLS
+            //--> GetPlanContainerByUId( planContainerUId, validateRls: true );
+
+            SqlTransaction trans = null;
+
+            try
+            {
+                _da.OpenConnection();
+                trans = _da.Connection.BeginTransaction(  );
+
+                SortedList parms = new sSortedList( "@PlanContainerUId", planContainerUId );
+                _da.ExecuteSP( "[synps].[api_planContainer_dml_del]", parms, trans == null, trans );
+
+                trans.Commit();
+            }
+            catch( Exception ex )
+            {
+                trans.Rollback();
+
+                throw;
+            }
+            finally
+            {
+                _da.CloseConnection();
+            }
         }
 
 
-        UIElement GetUIElementFromPlanContainer(PlanContainer planContainer)
+        UIElement GetSuplexUIElementFromPlanContainer(PlanContainer planContainer)
         {
             UIElement uie = new UIElement()
             {
@@ -414,7 +444,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
                 NodeUri = r.GetColumnValueAsString( "NodeUri" ),
                 RlsOwner = r.GetColumnValueAsGuid( "RlsOwner" ),
                 RlsMask = r.GetColumnValueAsByteArray( "RlsMask" ),
-                ParentUId = r.GetColumnValueAsGuid( "ParentUId" ),
+                ParentUId = r.IsDBNullOrValue<Guid?>( "ParentUId", null ),
                 AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" ),
                 AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" ),
                 AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" ),

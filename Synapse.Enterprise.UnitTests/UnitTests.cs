@@ -22,21 +22,31 @@ namespace Synapse.Enterprise.UnitTests
         [Category( "PlanContainer" )]
         void WarpFactorLove()
         {
-            Guid rootId = Guid.NewGuid();
-            PlanContainer root = UpsertPlanContainer( rootId, __root, null );
+            Guid rootUId = Guid.NewGuid();
+            PlanContainer root = UpsertPlanContainer( rootUId, __root, null );
             PlanContainer groot = _dal.GetPlanContainerByUId( root.UId );
 
             Assert.AreEqual( root.CurrentHashCode, groot.CurrentHashCode );
 
 
-            Guid childId = Guid.NewGuid();
-            PlanContainer child = UpsertPlanContainer( childId, null, root.UId );
+            Guid childUId = Guid.NewGuid();
+            PlanContainer child = UpsertPlanContainer( childUId, null, root.UId );
             child.Name += "_foo";
             child = _dal.UpsertPlanContainer( child );
             PlanContainer quiddo = _dal.GetPlanContainerByUId( child.UId );
 
             Assert.AreEqual( child.CurrentHashCode, quiddo.CurrentHashCode );
             Assert.AreEqual( root.UId, quiddo.ParentUId.GetValueOrDefault() );
+
+
+            _dal.DeletePlanContainer( child.UId );
+            quiddo = _dal.GetPlanContainerByUId( child.UId );
+            Assert.IsNull( quiddo );
+
+
+            _dal.DeletePlanContainer( root.UId );
+            groot = _dal.GetPlanContainerByUId( groot.UId );
+            Assert.IsNull( groot );
 
 
             //UpdateSecurityRecord( child );
