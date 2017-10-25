@@ -70,7 +70,6 @@
     <Compile Include="CoreClasses\PlanItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Suplex\SuplexSecurity.cs" />
-    <Compile Include="tester.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Synapse.Enterprise.Api.Common\Synapse.Enterprise.Api.Common.csproj">

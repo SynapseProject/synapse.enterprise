@@ -161,7 +161,13 @@ namespace Synapse.Services.Enterprise.Api.Dal
 		public static DateTimeOffset ToDateTimeOffset(this DateTime datetime, TimeSpan offset)
 		{
 			return new DateTimeOffset( datetime, offset );
-		}
+        }
+
+
+        public static object Coalesce(string value, object alternateValue = null)
+        {
+            return string.IsNullOrWhiteSpace( value ) ? alternateValue ?? Convert.DBNull : value;
+        }
 
         //public static string UnwindException(string method, Exception ex)
         //{

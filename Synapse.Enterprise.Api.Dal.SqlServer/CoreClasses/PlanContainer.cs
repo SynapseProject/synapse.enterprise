@@ -32,9 +32,25 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return planContainer;
         }
 
-        public List<PlanContainer> GetPlanContainerByAny(Guid? planContainerUId = null, string name = null, string nodeUri = null, string createdBy = null, DateTime? createdTime = null, string modifiedBy = null, DateTime? modifiedTime = null)
+        public List<PlanContainer> GetPlanContainerByAny(Guid? planContainerUId = null, string name = null, string nodeUri = null,
+            string createdBy = null, DateTime? createdTime = null, string modifiedBy = null, DateTime? modifiedTime = null,
+            bool returnAsHierarchy = false, Guid? startUId = null, bool validateRls = false)
         {
-            return new List<PlanContainer>();
+            List<PlanContainer> containers = new List<PlanContainer>();
+
+            SortedList parms = GetPlanContainerSelectParms( planContainerUId, name, nodeUri, createdBy, createdTime, modifiedBy, modifiedTime );
+
+            DataTable t = _da.GetDataSet( "[synps].[api_planContainer_sel]", parms ).Tables[0];
+
+            byte[] userMask = validateRls ? GetSuplexUser( true, true, _securityContext ).RlsMask : null;
+
+            PlanContainerFactory factory = new PlanContainerFactory();
+            if( returnAsHierarchy )
+                factory.LoadListFromTableRecursive( containers, t, "ELEMENT_UID_PARENT", "ELEMENT_NAME", startUId, "ELEMENT_UID", userMask );
+            else
+                factory.LoadListFromTable( containers, t, userMask );
+
+            return containers;
         }
 
         public PlanContainer UpsertPlanContainer(PlanContainer planContainer)
@@ -161,6 +177,8 @@ namespace Synapse.Services.Enterprise.Api.Dal
         }
 
 
+
+
         UIElement GetSuplexUIElementFromPlanContainer(PlanContainer planContainer)
         {
             UIElement uie = new UIElement()
@@ -181,14 +199,29 @@ namespace Synapse.Services.Enterprise.Api.Dal
             return uie;
         }
 
-        private SortedList GetPlanContainerParms(PlanContainer planContainer, bool forCreate)
+        SortedList GetPlanContainerSelectParms(Guid? planContainerUId = null, string name = null, string nodeUri = null,
+            string createdBy = null, DateTime? createdTime = null, string modifiedBy = null, DateTime? modifiedTime = null)
+        {
+            return new SortedList
+            {
+                { "@PlanContainerUId", planContainerUId ?? Convert.DBNull },
+                { "@Name", Utilities.Coalesce( name, Convert.DBNull ) },
+                { "@NodeUri", Utilities.Coalesce( nodeUri, Convert.DBNull ) },
+                { "@AuditCreatedBy", Utilities.Coalesce( createdBy, Convert.DBNull ) },
+                { "@AuditCreatedTime" , createdTime ?? Convert.DBNull },
+                { "@AuditModifiedBy", Utilities.Coalesce( modifiedBy, Convert.DBNull ) },
+                { "@AuditModifiedTime" , modifiedTime ?? Convert.DBNull },
+            };
+        }
+
+        SortedList GetPlanContainerParms(PlanContainer planContainer, bool forCreate)
         {
             SortedList parms = new SortedList
             {
                 { "@PlanContainerUId", planContainer.UId },
                 { "@Name", planContainer.Name },
-                { "@Description", string.IsNullOrWhiteSpace( planContainer.Description ) ? Convert.DBNull : planContainer.Description },
-                { "@NodeUri", string.IsNullOrWhiteSpace( planContainer.NodeUri ) ? Convert.DBNull : planContainer.NodeUri },
+                { "@Description", Utilities.Coalesce( planContainer.Description, Convert.DBNull ) },
+                { "@NodeUri", Utilities.Coalesce( planContainer.NodeUri, Convert.DBNull ) },
                 { "@RlsOwner", planContainer.RlsOwner == Guid.Empty ? Convert.DBNull : planContainer.RlsOwner },
                 { "@RlsMask" , planContainer.RlsMask ?? PlanContainerSecurity.GetEmptyRlsMask() },
                 { "@ParentUId", !planContainer.ParentUId.HasValue || planContainer.ParentUId == Guid.Empty ? Convert.DBNull : planContainer.ParentUId }
