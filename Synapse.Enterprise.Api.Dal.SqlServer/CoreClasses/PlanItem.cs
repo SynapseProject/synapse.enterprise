@@ -37,7 +37,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
         public PlanItem UpsertPlan(PlanItem plan)
         {
-            if( plan.IsDirty  )
+            if( plan.IsDirty )
                 if( plan.IsNew )
                     plan = CreatePlanItem( plan );
                 else
@@ -115,27 +115,40 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
         public void DeletePlan(Guid planUId)
         {
-            throw new NotImplementedException();
+            DeletePlanInternal( planUId );
+        }
+
+        internal void DeletePlanInternal(Guid planUId, SqlTransaction trans = null)
+        {
+            SortedList parms = new SortedList
+            {
+                { "@PlanUId", planUId }
+            };
+            _da.ExecuteSP( "[synps].[api_plan_dml_del]", parms, trans == null, trans );
         }
 
 
         private SortedList GetPlanParms(PlanItem plan, bool forCreate)
         {
-            SortedList parms = new SortedList();
+            SortedList parms = new SortedList
+            {
+                { "@Name", plan.Name },
+                { "@Description", string.IsNullOrWhiteSpace( plan.Description ) ? Convert.DBNull : plan.Description },
+                { "@UniqueName", plan.UniqueName },
+                { "@IsActive", plan.IsActive },
+                { "@PlanFile", plan.PlanFile },
+                { "@PlanFileIsUri", plan.PlanFileIsUri },
+                { "@PlanContainerUId", plan.PlanContainerUId }
+            };
 
-            if( !forCreate ) parms.Add( "@PlanUId", plan.UId );
-            parms.Add( "@Name", plan.Name );
-            if( string.IsNullOrWhiteSpace( plan.Description ) ) parms.Add( "@Description", Convert.DBNull ); else parms.Add( "@Description", plan.Description );
-            parms.Add( "@UniqueName", plan.UniqueName );
-            parms.Add( "@IsActive", plan.IsActive );
-            parms.Add( "@PlanFile", plan.PlanFile );
-            parms.Add( "@PlanFileIsUri", plan.PlanFileIsUri );
-            parms.Add( "@PlanContainerUId", plan.PlanContainerUId );
 
             if( forCreate )
                 parms.Add( "@AuditCreatedBy", plan.AuditCreatedBy );
             else
+            {
                 parms.Add( "@AuditModifiedBy", plan.AuditModifiedBy );
+                parms.Add( "@PlanUId", plan.UId );
+            }
 
             return parms;
         }
@@ -145,20 +158,21 @@ namespace Synapse.Services.Enterprise.Api.Dal
     {
         public override PlanItem CreateRecord(DataRow r)
         {
-            PlanItem planItem = new PlanItem();
-
-            planItem.UId = r.GetColumnValueAsGuid( "PlanUId" );
-            planItem.Name = r.GetColumnValueAsString( "Name" );
-            planItem.Description = r.GetColumnValueAsString( "Description" );
-            planItem.UniqueName = r.GetColumnValueAsString( "UniqueName" );
-            planItem.IsActive = r.GetColumnValueAsBool( "IsActive" );
-            planItem.PlanFile = r.GetColumnValueAsString( "PlanFile" );
-            planItem.PlanFileIsUri = r.GetColumnValueAsBool( "PlanFileIsUri" );
-            planItem.PlanContainerUId = r.GetColumnValueAsGuid( "PlanContainerUId" );
-            planItem.AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" );
-            planItem.AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" );
-            planItem.AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" );
-            planItem.AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" );
+            PlanItem planItem = new PlanItem
+            {
+                UId = r.GetColumnValueAsGuid( "PlanUId" ),
+                Name = r.GetColumnValueAsString( "Name" ),
+                Description = r.GetColumnValueAsString( "Description" ),
+                UniqueName = r.GetColumnValueAsString( "UniqueName" ),
+                IsActive = r.GetColumnValueAsBool( "IsActive" ),
+                PlanFile = r.GetColumnValueAsString( "PlanFile" ),
+                PlanFileIsUri = r.GetColumnValueAsBool( "PlanFileIsUri" ),
+                PlanContainerUId = r.GetColumnValueAsGuid( "PlanContainerUId" ),
+                AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" ),
+                AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" ),
+                AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" ),
+                AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" )
+            };
 
             planItem.InitialHashCode = planItem.CurrentHashCode;
 

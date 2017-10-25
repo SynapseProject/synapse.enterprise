@@ -9,17 +9,22 @@ namespace Synapse.Services.Enterprise.Api.Common
 {
     public abstract partial class SynapseRecordBase : ISynapseRecord
     {
-        public virtual Guid UId { get; set; }
+        /// <summary>
+        /// The uniqueId of the item; set UId to Guid.Empty to indicate a new item.
+        /// </summary>
+        [Description( "The uniqueId of the item; set UId to Guid.Empty to indicate a new item." )]
+        public virtual Guid UId { get; set; } = Guid.Empty;
 
         /// <summary>
         /// Item friendly name.
         /// </summary>
+        [Description( "Item friendly name." )]
         public virtual string Name { get; set; }
 
         /// <summary>
         /// The user to create the item.
         /// </summary>
-        [Description( "The last user to modify the item." )]
+        [Description( "The user to create the item." )]
         public virtual string AuditCreatedBy { get; set; }
 
         /// <summary>
@@ -41,7 +46,7 @@ namespace Synapse.Services.Enterprise.Api.Common
         public virtual DateTime AuditModifiedTime { get; set; }
 
 
-        [Description( "Indicates if the record already exists in the database. IsNew == true: the record does not exist." )]
+        [Description( "Indicates if the record already exists in the database. IsNew = UId == Guid.Empty." )]
         public virtual bool IsNew { get { return UId == Guid.Empty; } }
         [Description( "The hash of the record when it was created/selected." )]
         public virtual int InitialHashCode { get; set; }

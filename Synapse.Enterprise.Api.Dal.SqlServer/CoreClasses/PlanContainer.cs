@@ -141,7 +141,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
             try
             {
                 _da.OpenConnection();
-                trans = _da.Connection.BeginTransaction(  );
+                trans = _da.Connection.BeginTransaction();
 
                 SortedList parms = new sSortedList( "@PlanContainerUId", planContainerUId );
                 _da.ExecuteSP( "[synps].[api_planContainer_dml_del]", parms, trans == null, trans );
@@ -186,14 +186,14 @@ namespace Synapse.Services.Enterprise.Api.Dal
             SortedList parms = new SortedList
             {
                 { "@PlanContainerUId", planContainer.UId },
-                { "@Name", planContainer.Name }
+                { "@Name", planContainer.Name },
+                { "@Description", string.IsNullOrWhiteSpace( planContainer.Description ) ? Convert.DBNull : planContainer.Description },
+                { "@NodeUri", string.IsNullOrWhiteSpace( planContainer.NodeUri ) ? Convert.DBNull : planContainer.NodeUri },
+                { "@RlsOwner", planContainer.RlsOwner == Guid.Empty ? Convert.DBNull : planContainer.RlsOwner },
+                { "@RlsMask" , planContainer.RlsMask ?? PlanContainerSecurity.GetEmptyRlsMask() },
+                { "@ParentUId", !planContainer.ParentUId.HasValue || planContainer.ParentUId == Guid.Empty ? Convert.DBNull : planContainer.ParentUId }
             };
 
-            if( string.IsNullOrWhiteSpace( planContainer.Description ) ) parms.Add( "@Description", Convert.DBNull ); else parms.Add( "@Description", planContainer.Description );
-            if( string.IsNullOrWhiteSpace( planContainer.NodeUri ) ) parms.Add( "@NodeUri", Convert.DBNull ); else parms.Add( "@NodeUri", planContainer.NodeUri );
-            if( planContainer.RlsOwner == Guid.Empty ) parms.Add( "@RlsOwner", Convert.DBNull ); else parms.Add( "@RlsOwner", planContainer.RlsOwner );
-            if( planContainer.RlsMask == null ) parms.Add( "@RlsMask", PlanContainerSecurity.GetEmptyRlsMask() ); else parms.Add( "@RlsMask", planContainer.RlsMask );
-            if( !planContainer.ParentUId.HasValue || planContainer.ParentUId == Guid.Empty ) parms.Add( "@ParentUId", Convert.DBNull ); else parms.Add( "@ParentUId", planContainer.ParentUId );
 
             if( forCreate )
                 parms.Add( "@AuditCreatedBy", planContainer.AuditCreatedBy );

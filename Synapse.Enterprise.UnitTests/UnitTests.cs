@@ -20,23 +20,33 @@ namespace Synapse.Enterprise.UnitTests
 
         [Test]
         [Category( "PlanContainer" )]
-        void WarpFactorLove()
+        public void WarpFactorLove()
         {
-            Guid rootUId = Guid.NewGuid();
-            PlanContainer root = UpsertPlanContainer( rootUId, __root, null );
+            PlanContainer root = UpsertPlanContainer( null, __root, null );
             PlanContainer groot = _dal.GetPlanContainerByUId( root.UId );
-
             Assert.AreEqual( root.CurrentHashCode, groot.CurrentHashCode );
 
 
-            Guid childUId = Guid.NewGuid();
-            PlanContainer child = UpsertPlanContainer( childUId, null, root.UId );
+            PlanContainer child = UpsertPlanContainer( null, null, root.UId );
             child.Name += "_foo";
             child = _dal.UpsertPlanContainer( child );
             PlanContainer quiddo = _dal.GetPlanContainerByUId( child.UId );
-
             Assert.AreEqual( child.CurrentHashCode, quiddo.CurrentHashCode );
             Assert.AreEqual( root.UId, quiddo.ParentUId.GetValueOrDefault() );
+
+
+            PlanItem pi = UpsertPlanItem( child );
+            PlanItem rpi = _dal.GetPlanByUId( pi.UId );
+            Assert.AreEqual( pi.CurrentHashCode, rpi.CurrentHashCode );
+
+            pi.Name += "_foo";
+            pi = _dal.UpsertPlan( pi );
+            rpi = _dal.GetPlanByUId( pi.UId );
+            Assert.AreEqual( pi.CurrentHashCode, rpi.CurrentHashCode );
+
+            _dal.DeletePlan( pi.UId );
+            rpi = _dal.GetPlanByUId( pi.UId );
+            Assert.IsNull( rpi );
 
 
             _dal.DeletePlanContainer( child.UId );
@@ -53,14 +63,11 @@ namespace Synapse.Enterprise.UnitTests
             //PlanItem pi = CreatePlanItem( child );
         }
 
-        [Test]
-        [Category( "PlanContainer" )]
-        [TestCase( __root )]
-        PlanContainer UpsertPlanContainer(Guid containerId, string name = null, Guid? parentId = null)
+        PlanContainer UpsertPlanContainer(Guid? containerId = null, string name = null, Guid? parentId = null)
         {
             PlanContainer pc = new PlanContainer()
             {
-                UId = containerId,
+                UId = containerId ?? Guid.Empty,
                 Name = string.IsNullOrWhiteSpace( name ) ? $"Root_0_{DateTime.Now.Ticks}" : name,
                 Description = __unit,
                 NodeUri = "http://foo",
@@ -76,8 +83,27 @@ namespace Synapse.Enterprise.UnitTests
             return pc;
         }
 
-        [Test]
-        [Category( "PlanContainer" )]
+        private PlanItem UpsertPlanItem(PlanContainer pc, Guid? planItemUId = null)
+        {
+            PlanItem pi = new PlanItem()
+            {
+                UId = planItemUId ?? Guid.Empty,
+                Name = "foo",
+                Description = "bar",
+                UniqueName = "uniqua",
+                IsActive = true,
+                PlanFile = "http://moo",
+                PlanFileIsUri = true,
+                PlanContainerUId = pc.UId,
+                AuditCreatedBy = "steve",
+                AuditModifiedBy = "stevo"
+            };
+
+            pi = _dal.UpsertPlan( pi );
+
+            return pi;
+        }
+
         void UpdateSecurityRecord(PlanContainer pc)
         {
             PermissionItem perm = new PermissionItem()
@@ -94,33 +120,6 @@ namespace Synapse.Enterprise.UnitTests
             _dal.UpdatePlanContainerSecurity( csr );
 
             PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( pc.UId );
-        }
-
-        [Test]
-        [Category( "PlanItem" )]
-        private PlanItem CreatePlanItem(PlanContainer pc)
-        {
-            PlanItem pi = new PlanItem()
-            {
-                Name = "foo",
-                Description = "poo",
-                UniqueName = "uniqua",
-                IsActive = true,
-                PlanFile = "http://moo",
-                PlanFileIsUri = true,
-                PlanContainerUId = pc.UId,
-                AuditCreatedBy = "steve",
-                AuditModifiedBy = "stevo"
-            };
-
-            pi = _dal.UpsertPlan( pi );
-
-            pi = _dal.GetPlanByUId( pi.UId );
-
-            pi.Name += "foo";
-            pi = _dal.UpsertPlan( pi );
-
-            return pi;
         }
     }
 }
