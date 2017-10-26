@@ -5,8 +5,11 @@ using System.Data;
 using System.Data.SqlClient;
 using System.DirectoryServices;
 
+using forms = Suplex.Forms;
 using Suplex.Forms.ObjectModel.Api;
+using bits = Suplex.BitLib;
 using ss = Suplex.Security;
+
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
@@ -46,9 +49,26 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
             PlanContainerFactory factory = new PlanContainerFactory();
             if( returnAsHierarchy )
-                factory.LoadListFromTableRecursive( containers, t, "ELEMENT_UID_PARENT", "ELEMENT_NAME", startUId, "ELEMENT_UID", userMask );
+                factory.LoadListFromTableRecursive( containers, t, "ParentUId", "Name", startUId, "PlanContainerUId", userMask );
             else
                 factory.LoadListFromTable( containers, t, userMask );
+
+            return containers;
+        }
+
+        public List<PlanContainer> GetPlanContainerHierarchy(Guid? planContainerUId)
+        {
+            byte[] userMask = GetSuplexUser( true, true, _securityContext ).RlsMask;
+            SortedList parms = new SortedList()
+            {
+                { "@PlanContainerUId", planContainerUId ?? Convert.DBNull },
+                { "@RlsMask", userMask }
+            };
+
+            DataTable t = _da.GetDataSet( "[synps].[api_planContainer_sel_composite_rls]", parms ).Tables[0];
+            PlanContainerFactory factory = new PlanContainerFactory() { UsePrefix = true };
+            List<PlanContainer> containers = new List<PlanContainer>();
+            factory.LoadListFromTableRecursive( containers, t, "ParentUId", "PlanContainerName", planContainerUId, "PlanContainerUId", userMask );
 
             return containers;
         }
@@ -467,21 +487,24 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
     public class PlanContainerFactory : SynapseRecordFactoryBase<PlanContainer>
     {
+        public bool UsePrefix { get; set; }
+
         public override PlanContainer CreateRecord(DataRow r)
         {
+            string prefix = UsePrefix ? "PlanContainer" : null;
             PlanContainer planContainer = new PlanContainer
             {
                 UId = r.GetColumnValueAsGuid( "PlanContainerUId" ),
-                Name = r.GetColumnValueAsString( "Name" ),
-                Description = r.GetColumnValueAsString( "Description" ),
+                Name = r.GetColumnValueAsString( $"{prefix}Name" ),
+                Description = r.GetColumnValueAsString( $"{prefix}Description" ),
                 NodeUri = r.GetColumnValueAsString( "NodeUri" ),
                 RlsOwner = r.GetColumnValueAsGuid( "RlsOwner" ),
                 RlsMask = r.GetColumnValueAsByteArray( "RlsMask" ),
                 ParentUId = r.IsDBNullOrValue<Guid?>( "ParentUId", null ),
-                AuditCreatedBy = r.GetColumnValueAsString( "AuditCreatedBy" ),
-                AuditCreatedTime = r.GetColumnValueAsDateTime( "AuditCreatedTime" ),
-                AuditModifiedBy = r.GetColumnValueAsString( "AuditModifiedBy" ),
-                AuditModifiedTime = r.GetColumnValueAsDateTime( "AuditModifiedTime" )
+                AuditCreatedBy = r.GetColumnValueAsString( $"{prefix}AuditCreatedBy" ),
+                AuditCreatedTime = r.GetColumnValueAsDateTime( $"{prefix}AuditCreatedTime" ),
+                AuditModifiedBy = r.GetColumnValueAsString( $"{prefix}AuditModifiedBy" ),
+                AuditModifiedTime = r.GetColumnValueAsDateTime( $"{prefix}AuditModifiedTime" )
             };
 
             planContainer.InitialHashCode = planContainer.CurrentHashCode;

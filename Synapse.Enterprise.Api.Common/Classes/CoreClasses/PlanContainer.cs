@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 using Synapse.Services.Enterprise.Api.Common;
@@ -6,7 +7,7 @@ using Synapse.Services.Enterprise.Api.Common;
 
 namespace Synapse.Services.Enterprise.Api
 {
-    public class PlanContainer : SynapseRecordBase, ISynapseSecureRecord
+    public class PlanContainer : SynapseRecordBase, ISynapseSecureRecord, ISynapseHierRecord<PlanContainer>
     {
         public string Description { get; set; }
         public string NodeUri { get; set; }
@@ -22,5 +23,9 @@ namespace Synapse.Services.Enterprise.Api
                     GetStringHashCode( NodeUri ) + GetGuidHashCode( ParentUId );
             }
         }
+
+        public List<PlanContainer> Children { get; set; }
+        Guid ISynapseHierRecord.ParentUId { get; set; }
+        IList ISynapseHierRecord.Children { get; set; }
     }
 }

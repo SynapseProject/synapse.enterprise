@@ -204,6 +204,22 @@ namespace Synapse.Services.Enterprise.Api.Dal
             DataRow[] rows = acl.Select( string.Format( "UIE_UNIQUE_NAME = '{0}'", rootUniqueName ) );
             if( rows.Length > 0 )
             {
+                string un = rows[0]["UIE_UNIQUE_NAME"].ToString();
+                if( un.Equals( uniqueName, StringComparison.OrdinalIgnoreCase ) )
+                {
+                    context = new SplxRecordManager() { UniqueName = un };
+                    if( aceType == AceType.FileSystem )
+                        context = new SplxFileSystemManager() { UniqueName = un };
+
+                    ctrl.Children.Add( context );
+                }
+                else
+                {
+                    SecureContainer child = new SecureContainer() { UniqueName = un };
+                    ctrl.Children.Add( child );
+                    ctrl = child;
+                }
+
                 rows = acl.Select( string.Format( "UIE_PARENT_ID = '{0}'", rows[0]["SPLX_UI_ELEMENT_ID"] ) );
             }
 

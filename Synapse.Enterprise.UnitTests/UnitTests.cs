@@ -20,7 +20,9 @@ namespace Synapse.Enterprise.UnitTests
 
         [Test]
         [Category( "PlanContainer" )]
-        public void WarpFactorLove()
+        [TestCase( true )]
+        [TestCase( false )]
+        public void WarpFactorLove(bool deleteData)
         {
             PlanContainer root = UpsertPlanContainer( null, __root, null );
             PlanContainer groot = _dal.GetPlanContainerByUId( root.UId );
@@ -43,6 +45,9 @@ namespace Synapse.Enterprise.UnitTests
             pi = _dal.UpsertPlan( pi );
             rpi = _dal.GetPlanByUId( pi.UId );
             Assert.AreEqual( pi.CurrentHashCode, rpi.CurrentHashCode );
+
+            if( !deleteData )
+                return;
 
             _dal.DeletePlan( pi.UId );
             rpi = _dal.GetPlanByUId( pi.UId );
@@ -104,22 +109,31 @@ namespace Synapse.Enterprise.UnitTests
             return pi;
         }
 
-        void UpdateSecurityRecord(PlanContainer pc)
+        [Test]
+        [Category( "PlanContainer" )]
+        public void SelectPlanContainerByUser()
+        {
+            _dal.GetPlanContainerHierarchy( null );
+        }
+
+        [Test]
+        [Category( "Security" )]
+        public void UpdateSecurityRecord()
         {
             PermissionItem perm = new PermissionItem()
             {
-                GroupId = Guid.Parse( "8E786183-592F-4322-A6B6-E4453E84A3D7" ),
+                GroupId = Guid.Parse( "4F89A474-B841-47CE-A438-DDED1F9B742E" ),
                 State = RecordState.Added,
                 Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
             };
             PlanContainerSecurity csr = new PlanContainerSecurity()
             {
-                PlanContainerUId = pc.UId
+                PlanContainerUId = Guid.Parse( "3F2CB4A7-D18C-4998-837D-6546F3B8E527" )
             };
             csr.Permissions.Add( perm );
             _dal.UpdatePlanContainerSecurity( csr );
 
-            PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( pc.UId );
+            PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( Guid.Parse( "AB58617E-FD61-4F12-AE29-68A416DC2BC0" ) );
         }
     }
 }
