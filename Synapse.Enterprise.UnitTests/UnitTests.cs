@@ -9,7 +9,6 @@ namespace Synapse.Enterprise.UnitTests
     public class UnitTests
     {
         const string __root = "SynapseRoot";
-        const string __unit = "SynapseUnitTest";
         SqlServerDal _dal = new SqlServerDal( "(localdb)\\MSSQLLocalDB", "synapse" );// new SqlServerDal( ".\\sqlexpress", "synapse" );
 
         [OneTimeSetUp]
@@ -24,12 +23,15 @@ namespace Synapse.Enterprise.UnitTests
         [TestCase( false )]
         public void WarpFactorLove(bool deleteData)
         {
-            PlanContainer root = UpsertPlanContainer( null, __root, null );
+            Guid rlsOwner = _dal.GetSuplexUser( true, false ).IdToGuid();
+            PlanContainer root = ObjectFactory.MakePlanContainer( name: __root, rlsOwner: rlsOwner );
+            root = _dal.UpsertPlanContainer( root );
             PlanContainer groot = _dal.GetPlanContainerByUId( root.UId );
             Assert.AreEqual( root.CurrentHashCode, groot.CurrentHashCode );
 
 
-            PlanContainer child = UpsertPlanContainer( null, null, root.UId );
+            PlanContainer child = ObjectFactory.MakePlanContainer( rlsOwner: rlsOwner, parentId: root.UId );
+            child = _dal.UpsertPlanContainer( child );
             child.Name += "_foo";
             child = _dal.UpsertPlanContainer( child );
             PlanContainer quiddo = _dal.GetPlanContainerByUId( child.UId );
@@ -37,7 +39,8 @@ namespace Synapse.Enterprise.UnitTests
             Assert.AreEqual( root.UId, quiddo.ParentUId.GetValueOrDefault() );
 
 
-            PlanItem pi = UpsertPlanItem( child );
+            PlanItem pi = ObjectFactory.MakePlanItem( child );
+            pi = _dal.UpsertPlan( pi );
             PlanItem rpi = _dal.GetPlanByUId( pi.UId );
             Assert.AreEqual( pi.CurrentHashCode, rpi.CurrentHashCode );
 
@@ -45,6 +48,10 @@ namespace Synapse.Enterprise.UnitTests
             pi = _dal.UpsertPlan( pi );
             rpi = _dal.GetPlanByUId( pi.UId );
             Assert.AreEqual( pi.CurrentHashCode, rpi.CurrentHashCode );
+
+
+            UpdateSecurityRecord( child.UId );
+
 
             if( !deleteData )
                 return;
@@ -62,33 +69,61 @@ namespace Synapse.Enterprise.UnitTests
             _dal.DeletePlanContainer( root.UId );
             groot = _dal.GetPlanContainerByUId( groot.UId );
             Assert.IsNull( groot );
-
-
-            //UpdateSecurityRecord( child );
-            //PlanItem pi = CreatePlanItem( child );
         }
 
-        PlanContainer UpsertPlanContainer(Guid? containerId = null, string name = null, Guid? parentId = null)
+        [Test]
+        [Category( "PlanContainer" )]
+        public void SelectPlanContainerByUser()
+        {
+            _dal.GetPlanContainerHierarchy( null );
+        }
+
+        [Test]
+        [Category( "Security" )]
+        public void UpdateSecurityRecord(Guid planContainerUId)
+        {
+            PermissionItem perm = new PermissionItem()
+            {
+                GroupId = Guid.Parse( "4f89a474-b841-47ce-a438-dded1f9b742e" ),
+                State = RecordState.Added,
+                Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
+            };
+            PlanContainerSecurity csr = new PlanContainerSecurity()
+            {
+                PlanContainerUId = planContainerUId
+            };
+
+            csr.Permissions.Add( perm );
+            _dal.UpdatePlanContainerSecurity( csr );
+
+            PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( planContainerUId );
+        }
+    }
+
+    partial class ObjectFactory
+    {
+        const string __unit = "SynapseUnitTest";
+
+        public static PlanContainer MakePlanContainer(Guid? containerId = null, string name = null, Guid? rlsOwner = null, Guid? parentId = null)
         {
             PlanContainer pc = new PlanContainer()
             {
                 UId = containerId ?? Guid.Empty,
-                Name = string.IsNullOrWhiteSpace( name ) ? $"Root_0_{DateTime.Now.Ticks}" : name,
+                Name = string.IsNullOrWhiteSpace( name ) ? $"Container_{DateTime.Now.Ticks}" : name,
                 Description = __unit,
                 NodeUri = "http://foo",
                 AuditCreatedBy = "steve",
                 AuditModifiedBy = "stevo",
-                RlsOwner = Guid.Parse( "a61f281e-d80f-4ddf-856d-5f6eb7a20caa" )
+                RlsOwner = rlsOwner.Value
             };
+
             if( parentId.HasValue )
                 pc.ParentUId = parentId.Value;
-
-            pc = _dal.UpsertPlanContainer( pc );
 
             return pc;
         }
 
-        private PlanItem UpsertPlanItem(PlanContainer pc, Guid? planItemUId = null)
+        public static PlanItem MakePlanItem(PlanContainer pc, Guid? planItemUId = null)
         {
             PlanItem pi = new PlanItem()
             {
@@ -104,36 +139,8 @@ namespace Synapse.Enterprise.UnitTests
                 AuditModifiedBy = "stevo"
             };
 
-            pi = _dal.UpsertPlan( pi );
-
             return pi;
         }
 
-        [Test]
-        [Category( "PlanContainer" )]
-        public void SelectPlanContainerByUser()
-        {
-            _dal.GetPlanContainerHierarchy( null );
-        }
-
-        [Test]
-        [Category( "Security" )]
-        public void UpdateSecurityRecord()
-        {
-            PermissionItem perm = new PermissionItem()
-            {
-                GroupId = Guid.Parse( "4F89A474-B841-47CE-A438-DDED1F9B742E" ),
-                State = RecordState.Added,
-                Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
-            };
-            PlanContainerSecurity csr = new PlanContainerSecurity()
-            {
-                PlanContainerUId = Guid.Parse( "3F2CB4A7-D18C-4998-837D-6546F3B8E527" )
-            };
-            csr.Permissions.Add( perm );
-            _dal.UpdatePlanContainerSecurity( csr );
-
-            PlanContainerSecurity sec = _dal.GetPlanContainerSecurity( Guid.Parse( "AB58617E-FD61-4F12-AE29-68A416DC2BC0" ) );
-        }
     }
 }

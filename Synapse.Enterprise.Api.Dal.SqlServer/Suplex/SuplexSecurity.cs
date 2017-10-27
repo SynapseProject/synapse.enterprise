@@ -29,7 +29,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 			return this.GetSuplexUser( resolve, true );
 		}
 
-        private ss.User GetSuplexUser(bool resolve, bool resolveRls, string username = null)
+        public ss.User GetSuplexUser(bool resolve, bool resolveRls, string username = null)
 		{
             string userName = string.IsNullOrWhiteSpace( username ) ? this.SecurityContext : username;
             ss.User user = new ss.User()

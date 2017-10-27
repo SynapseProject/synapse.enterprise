@@ -167,6 +167,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
         }
 
         //todo: make recursive
+        //todo: delete security info
         public void DeletePlanContainer(Guid planContainerUId)
         {
             //check RLS
