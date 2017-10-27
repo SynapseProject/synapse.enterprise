@@ -24,8 +24,12 @@ namespace Synapse.Services.Enterprise.Api
             }
         }
 
-        public List<PlanContainer> Children { get; set; }
-        Guid ISynapseHierRecord.ParentUId { get; set; }
-        IList ISynapseHierRecord.Children { get; set; }
+        public List<PlanContainer> Children { get; set; } = new List<PlanContainer>();
+        Guid ISynapseHierRecord.ParentUId { get { return ParentUId.GetValueOrDefault(); } set { ParentUId = value; } }
+        IList ISynapseHierRecord.Children
+        {
+            get { return Children; }
+            set { Children = value as List<PlanContainer>; }
+        }
     }
 }
