@@ -69,10 +69,6 @@
       <Project>{C2D081EF-8454-4D63-8D36-EA67BB9183EA}</Project>
       <Name>Synapse.Enterprise.Api.Common</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Synapse.Enterprise.Api.Dal.SqlServer\Synapse.Enterprise.Api.Dal.SqlServer.csproj">
-      <Project>{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}</Project>
-      <Name>Synapse.Enterprise.Api.Dal.SqlServer</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

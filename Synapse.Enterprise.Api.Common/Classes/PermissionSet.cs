@@ -1,6 +1,6 @@
 ﻿using System;
 
-using Suplex.Security;
+using Suplex.Security.AclModel;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {

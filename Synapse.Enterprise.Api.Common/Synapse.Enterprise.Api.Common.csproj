@@ -30,15 +30,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Interop.MSScriptControl, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Interop.MSScriptControl.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-    </Reference>
-    <Reference Include="Suplex.Core, Version=4.0.0.2, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Suplex.Core.4.0.0.2\lib\net40\Suplex.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Synapse.Core">
-      <HintPath>..\..\synapse.core.net\Synapse.Core\bin\Debug\Synapse.Core.dll</HintPath>
+    <Reference Include="Suplex.Security.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Suplex.Security.Core.1.0.18163\lib\net45\Suplex.Security.Core.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

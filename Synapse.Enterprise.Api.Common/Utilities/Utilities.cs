@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Data;
 
-using Suplex.Forms.SecureManager;
-using Suplex.Security;
-using System.Text;
-using System.Collections.Generic;
 
 namespace Synapse.Services.Enterprise.Api.Dal
 {
@@ -31,13 +27,12 @@ namespace Synapse.Services.Enterprise.Api.Dal
 		public static ParseResult<T> TryParseEnum<T>(object data) where T : struct
 		{
 			ParseResult<T> r = new ParseResult<T>();
-			T result;
-			if( Enum.TryParse<T>( data.ToString(), true, out result ) )
-			{
-				r.Success = true;
-				r.Result = result;
-			}
-			return r;
+            if( Enum.TryParse( data.ToString(), true, out T result ) )
+            {
+                r.Success = true;
+                r.Result = result;
+            }
+            return r;
 		}
 
 		//public static T IsDBNullOrValue<T>(this DataRow r, string field, T altValue)
@@ -147,7 +142,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
 
 			if( typeof( T ).IsEnum )
 			{
-				value = r[field] == Convert.DBNull ? altValue : Suplex.General.MiscUtils.ParseEnum<T>( r[field].ToString() );
+				value = r[field] == Convert.DBNull ? altValue : ParseEnum<T>( r[field].ToString() );
 			}
 			else
 			{

@@ -165,7 +165,7 @@ namespace Synapse.Services.Enterprise.Api.Dal
         public string SecurityPrincipal { get; set; }
         public Guid SecurityPrincipalId { get; set; }
         public string Right { get; set; }
-        public Suplex.Security.FileSystemRight Rights { get; set; }
+        public Suplex.Security.AclModel.FileSystemRight Rights { get; set; }
         public bool Allowed { get; set; }
         public byte[] GroupMask { get; set; }
     }

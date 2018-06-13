@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.12
+VisualStudioVersion = 15.0.27130.2026
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapse.Enterprise.Api", "Synapse.Enterprise.Api\Synapse.Enterprise.Api.csproj", "{6335FE8D-72F6-40E6-98B8-F921EAF9377D}"
 EndProject
@@ -10,10 +10,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapse.Enterprise.Api.HttpClient", "Synapse.Enterprise.Api.HttpClient\Synapse.Enterprise.Api.HttpClient.csproj", "{059D8C9C-6397-422C-9AE1-9206A6C3D324}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapse.Enterprise.Api.Cli", "Synapse.Enterprise.Api.Cli\Synapse.Enterprise.Api.Cli.csproj", "{8FB2EBE2-EDBF-4CB9-8F85-3771F59E8A51}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapse.Enterprise.Api.Dal.SqlServer", "Synapse.Enterprise.Api.Dal.SqlServer\Synapse.Enterprise.Api.Dal.SqlServer.csproj", "{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Synapse.Enterprise.UnitTests", "Synapse.Enterprise.UnitTests\Synapse.Enterprise.UnitTests.csproj", "{8D7EE7AC-6230-41CE-9229-1DEFC1364E86}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -37,14 +33,6 @@ Global
 		{8FB2EBE2-EDBF-4CB9-8F85-3771F59E8A51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8FB2EBE2-EDBF-4CB9-8F85-3771F59E8A51}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8FB2EBE2-EDBF-4CB9-8F85-3771F59E8A51}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E8837A4C-6B6B-423E-9CBB-40C70DE2E645}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8D7EE7AC-6230-41CE-9229-1DEFC1364E86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D7EE7AC-6230-41CE-9229-1DEFC1364E86}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8D7EE7AC-6230-41CE-9229-1DEFC1364E86}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8D7EE7AC-6230-41CE-9229-1DEFC1364E86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

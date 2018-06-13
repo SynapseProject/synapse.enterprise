@@ -86,7 +86,7 @@ namespace Synapse.Enterprise.UnitTests
             {
                 GroupId = Guid.Parse( "4f89a474-b841-47ce-a438-dded1f9b742e" ),
                 State = RecordState.Added,
-                Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
+                ////Rights = PermissionUtility.RightsFromRole( PermissionRole.ReadWrite )
             };
             PlanContainerSecurity csr = new PlanContainerSecurity()
             {
