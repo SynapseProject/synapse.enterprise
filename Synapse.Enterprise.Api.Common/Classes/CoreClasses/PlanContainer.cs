@@ -36,7 +36,11 @@ namespace Synapse.Services.Enterprise.Api
             get { return Children; }
             set { Children = value as List<PlanContainer>; }
         }
-        IList<ISecureObject> ISecureObject.Children { get => (IList<ISecureObject>)Children; set => Children = value as List<PlanContainer>; }
+        IList ISecureObject.Children
+        {
+            get { return Children; }
+            set { Children = value as List<PlanContainer>; }
+        }
 
 
         public override int CurrentHashCode
